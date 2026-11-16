@@ -69,6 +69,18 @@ TypeScript `strict` with no unused locals or parameters.
 4. Run the full check, commit, then tag `vX.Y.Z` and push the tag. The Release workflow
    verifies everything again, builds MSI/NSIS installers and drafts a GitHub release whose
    body is that changelog section.
+5. **Publish the draft.** Installed copies update from
+   `releases/latest/download/latest.json`, which only resolves to a *published*,
+   non-prerelease release that anonymous users can read.
+
+**In-app updates** use the Tauri updater:
+- Bundles are signed with the key in `%USERPROFILE%\.tauri\harbor-updater.key`. Its password is
+  stored next to it. The matching public key is in `tauri.conf.json` → `plugins.updater.pubkey`.
+- The release job reads the private key from the `TAURI_SIGNING_PRIVATE_KEY` and
+  `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` repository secrets, and fails early if they're missing.
+- **Never commit the private key, and never lose it.** Installed copies only accept updates
+  signed with it. A new key means everyone has to reinstall once.
+- CI's installer smoke build disables updater artifacts, so it needs no secrets.
 
 ## 3. Commits and pull requests
 

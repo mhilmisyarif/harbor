@@ -5,6 +5,8 @@ import { BarSettings, Config, DockSettings, exeName, PinnedApp, samePath } from 
 import { iconKey, useConfig, useIcons } from "../lib/config";
 import { pickApp, pickIcon } from "../lib/pickIcon";
 import { DockLayoutSection } from "./DockLayout";
+import { useUpdater } from "../lib/updates";
+import { fmtBytes } from "../widgets/kit";
 
 type Update = (change: (c: Config) => Config) => void;
 
@@ -252,10 +254,8 @@ function BarSection({ bar, update }: { bar: BarSettings; update: Update }) {
 
 function GeneralSection() {
   const [autostart, setAutostart] = useState<boolean | null>(null);
-  const [version, setVersion] = useState("");
   useEffect(() => {
     isEnabled().then(setAutostart, () => setAutostart(false));
-    getVersion().then(setVersion, () => {});
   }, []);
   const toggle = async (on: boolean) => {
     await (on ? enable() : disable());
@@ -269,11 +269,64 @@ function GeneralSection() {
       <Row label="Show / hide dock" hint="Global shortcut">
         <kbd className="s-kbd">Alt</kbd>+<kbd className="s-kbd">D</kbd>
       </Row>
-      {version && (
-        <Row label="Version">
-          <span className="s-hint">Harbor {version}</span>
+
+    </Section>
+  );
+}
+
+function UpdatesSection({ config, update }: { config: Config; update: Update }) {
+  const u = useUpdater(config.updates);
+  const [version, setVersion] = useState("");
+  useEffect(() => {
+    getVersion().then(setVersion, () => {});
+  }, []);
+  const set = (patch: Partial<Config["updates"]>) => update((c) => ({ ...c, updates: { ...c.updates, ...patch } }));
+  const s = u.state;
+  return (
+    <Section title="Updates">
+      <Row label="Current version" hint={s.kind === "current" ? `Up to date · checked ${s.checkedAt.toLocaleTimeString()}` : undefined}>
+        <span className="s-hint">Harbor {version}</span>
+      </Row>
+      {s.kind === "available" && (
+        <div className="s-update">
+          <div>
+            <b>Harbor {s.update.version} is available</b>
+            {s.update.body && <pre className="s-notes">{s.update.body}</pre>}
+          </div>
+          <button className="s-btn s-primary" onClick={() => u.install(s.update)}>
+            Install and restart
+          </button>
+        </div>
+      )}
+      {s.kind === "downloading" && (
+        <Row label={`Downloading ${s.update.version}…`}>
+          <span className="s-hint">
+            {fmtBytes(s.done)}
+            {s.total ? ` of ${fmtBytes(s.total)}` : ""}
+          </span>
         </Row>
       )}
+      {s.kind === "installing" && (
+        <Row label="Installing…" hint="Harbor will restart in a moment.">
+          <span />
+        </Row>
+      )}
+      {s.kind === "error" && <p className="s-error s-pad">{s.message}</p>}
+      <Row label="Check automatically" hint="At startup and every 6 hours.">
+        <Toggle label="Check automatically" checked={config.updates.autoCheck} onChange={(autoCheck) => set({ autoCheck })} />
+      </Row>
+      <Row label="Install automatically" hint="Download and install as soon as an update is found. Harbor restarts.">
+        <Toggle
+          label="Install automatically"
+          checked={config.updates.autoInstall}
+          onChange={(autoInstall) => set({ autoInstall })}
+        />
+      </Row>
+      <div className="s-row s-row-end">
+        <button className="s-btn" disabled={s.kind === "checking" || s.kind === "downloading" || s.kind === "installing"} onClick={u.check}>
+          {s.kind === "checking" ? "Checking…" : "Check for updates"}
+        </button>
+      </div>
     </Section>
   );
 }
@@ -289,6 +342,7 @@ export function Settings() {
       <PinnedSection config={config} update={update} />
       <BarSection bar={config.bar} update={update} />
       <GeneralSection />
+      <UpdatesSection config={config} update={update} />
     </main>
   );
 }

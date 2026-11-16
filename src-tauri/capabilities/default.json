@@ -9,6 +9,8 @@
     "core:window:allow-hide",
     "autostart:default",
     "dialog:allow-open",
-    "notification:default"
+    "notification:default",
+    "updater:default",
+    "process:allow-restart"
   ]
 }

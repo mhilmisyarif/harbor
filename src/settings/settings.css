@@ -168,3 +168,7 @@ body[data-surface="settings"] #root {
 .s-dock-item + .s-dock-item, .s-dock-item + .s-row { border-top: 1px solid rgba(255, 255, 255, 0.06); }
 .s-wrap { flex-wrap: wrap; gap: 6px; }
 .s-gallery { padding-top: 12px; max-height: 520px; overflow-y: auto; }
+
+/* updates */
+.s-update { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 14px; background: rgba(96, 165, 250, 0.1); }
+.s-notes { white-space: pre-wrap; font: inherit; font-size: 12px; color: var(--muted); margin: 6px 0 0; max-height: 160px; overflow-y: auto; }

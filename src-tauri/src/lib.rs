@@ -6,7 +6,7 @@ use commands::{
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    AppHandle, Manager, WindowEvent,
+    AppHandle, Emitter, Manager, WindowEvent,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
@@ -29,8 +29,9 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
         None::<&str>,
     )?;
     let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
+    let updates = MenuItem::with_id(app, "updates", "Check for updates…", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Harbor", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&toggle, &settings, &quit])?;
+    let menu = Menu::with_items(app, &[&toggle, &settings, &updates, &quit])?;
 
     let mut builder = TrayIconBuilder::with_id("main")
         .tooltip("Harbor")
@@ -39,6 +40,11 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
             "toggle" => toggle_dock(app),
             "settings" => {
                 let _ = layout::show_settings(app);
+            }
+            "updates" => {
+                let _ = layout::show_settings(app);
+                // The settings window runs the updater (it holds the update UI).
+                let _ = app.emit("check-updates", ());
             }
             "quit" => {
                 layout::release_all();
@@ -80,6 +86,8 @@ pub fn run() {
         )
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .manage(stats::StatsState::default())
         .manage(widgets::Http::default())
         .manage(widgets::NetState::default())

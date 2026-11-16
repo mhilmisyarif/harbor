@@ -55,6 +55,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   closed unexpectedly.
 - Option to turn off the top menu bar.
 - Dock presets: Floating dock, Taskbar replacement, Widget dock and Top strip.
+- In-app updates. Harbor checks for a new version at startup and every 6 hours,
+  and notifies you when one is available. **Settings → Updates** installs it and
+  restarts Harbor, with no manual reinstall. You can turn on automatic installs,
+  or check any time from the tray menu. Updates are signed, and Harbor only
+  installs builds signed with the project's key.
 
 ### Changed
 

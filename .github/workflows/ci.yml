@@ -116,7 +116,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
-      - run: npx tauri build
+      # Smoke-test the installers without update signing (that key only lives in the release job).
+      - shell: bash
+        run: npx tauri build --config '{"bundle":{"createUpdaterArtifacts":false}}'
       - uses: actions/upload-artifact@v7
         with:
           name: harbor-installers-${{ github.sha }}

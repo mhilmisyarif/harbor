@@ -65,10 +65,16 @@ export interface BarSettings {
   clock24h: boolean;
 }
 
+export interface UpdateSettings {
+  autoCheck: boolean;
+  autoInstall: boolean;
+}
+
 export interface Config {
   pinned: PinnedApp[];
   dock: DockSettings;
   bar: BarSettings;
+  updates: UpdateSettings;
   /** Custom PNG data-URL icons keyed by lower-cased icon source. */
   iconOverrides: Record<string, string>;
 }

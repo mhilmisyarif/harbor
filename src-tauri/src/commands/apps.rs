@@ -123,10 +123,29 @@ impl Default for BarSettings {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
+pub struct UpdateSettings {
+    /// Look for a new version at startup and every few hours.
+    pub auto_check: bool,
+    /// Download and install as soon as one is found (Harbor restarts).
+    pub auto_install: bool,
+}
+
+impl Default for UpdateSettings {
+    fn default() -> Self {
+        Self {
+            auto_check: true,
+            auto_install: false,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
 pub struct Config {
     pub pinned: Vec<PinnedApp>,
     pub dock: DockSettings,
     pub bar: BarSettings,
+    pub updates: UpdateSettings,
     /// Custom icons keyed by lower-cased icon source (pinned path or running app).
     pub icon_overrides: BTreeMap<String, String>,
 }
@@ -146,6 +165,7 @@ impl Default for Config {
             ],
             dock: DockSettings::default(),
             bar: BarSettings::default(),
+            updates: UpdateSettings::default(),
             icon_overrides: BTreeMap::new(),
         }
     }
@@ -266,6 +286,11 @@ mod tests {
         let c: Config = serde_json::from_str(old).unwrap();
         assert_eq!(c.pinned.len(), 1);
         assert_eq!(c.dock, DockSettings::default());
+        assert_eq!(
+            c.updates,
+            UpdateSettings::default(),
+            "update checks default on for old configs"
+        );
         assert!(c.icon_overrides.is_empty());
     }
 
