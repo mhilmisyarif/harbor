@@ -60,7 +60,7 @@ pub fn window_title(h: HWND) -> String {
 }
 
 /// Executable path and (for packaged apps) AppUserModelID of a process.
-fn process_info(pid: u32) -> (Option<String>, Option<String>) {
+pub(crate) fn process_info(pid: u32) -> (Option<String>, Option<String>) {
     unsafe {
         let Ok(handle) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, BOOL(0), pid) else {
             return (None, None);

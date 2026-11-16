@@ -8,6 +8,7 @@ import { Backdrop } from "../lib/Backdrop";
 import { iconKey, useConfig, useIcons } from "../lib/config";
 import { pickIcon } from "../lib/pickIcon";
 import { useWidgetConfig } from "../lib/widgetConfig";
+import { setShared } from "../widgets/kit";
 import { PanelButtonPill, PILLS } from "../widgets/pills";
 import { widgetByKind } from "../widgets/registry";
 
@@ -209,6 +210,19 @@ export function Dock() {
     const unlisten = getCurrentWebview().onDragDropEvent((e) => {
       if (e.payload.type !== "drop") return;
       const dropped = e.payload.paths;
+      // Dropped on the Recycle Bin pill: recycle the files instead of pinning them.
+      const { x, y } = e.payload.position; // physical px
+      const target = document
+        .elementFromPoint(x / window.devicePixelRatio, y / window.devicePixelRatio)
+        ?.closest<HTMLElement>("[data-entry]");
+      const entry = target && config?.dock.items.find((i) => i.id === target.dataset.entry);
+      if (entry?.kind === "widget:recycle-bin") {
+        api
+          .recycleFiles(dropped)
+          .then(async () => setShared("recycle-bin", await api.recycleBin()))
+          .catch(console.error);
+        return;
+      }
       update((c) => ({
         ...c,
         pinned: [
@@ -220,7 +234,7 @@ export function Dock() {
     return () => {
       unlisten.then((f) => f());
     };
-  }, [update]);
+  }, [update, config]);
 
   const d = config?.dock;
   const size = d?.iconSize ?? 48;

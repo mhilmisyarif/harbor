@@ -51,6 +51,11 @@ windows = { version = "0.58", features = [
   "Win32_System_Registry",
   "Win32_UI_Input_KeyboardAndMouse",
   "Win32_Globalization",
+  "Win32_Devices_Display",
+  "Win32_System_SystemInformation",
+  # Wi-Fi / Bluetooth radios
+  "Devices_Radios",
+  "Foundation_Collections",
   # Now Playing (Windows media session API)
   "Foundation",
   "Media_Control",

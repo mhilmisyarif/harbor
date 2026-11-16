@@ -1,8 +1,8 @@
 mod commands;
 
 use commands::{
-    apps, audio, icons, layout, media, stats, system_extra, taskbar, wallpaper, widgets,
-    windows_list,
+    apps, audio, icons, layout, media, screen_time, stats, system_controls, system_extra, taskbar,
+    wallpaper, widgets, windows_list,
 };
 use tauri::{
     menu::{Menu, MenuItem},
@@ -108,6 +108,8 @@ pub fn run() {
                 layout::place_bar(handle)?;
             }
             layout::place_dock(handle, layout::DockGeometry::initial(), true)?;
+            system_controls::start_fullscreen_watch(handle.clone());
+            screen_time::start(handle.clone());
             Ok(())
         })
         .on_window_event(|window, event| match event {
@@ -163,6 +165,17 @@ pub fn run() {
             layout::place_card,
             layout::close_card,
             wallpaper::desktop_wallpaper,
+            system_controls::recycle_files,
+            system_controls::app_volumes,
+            system_controls::set_app_volume,
+            system_controls::list_radios,
+            system_controls::set_radio,
+            system_controls::get_brightness,
+            system_controls::set_brightness,
+            system_controls::recent_files,
+            system_controls::reveal_file,
+            system_controls::open_known_folder,
+            screen_time::screen_time,
             taskbar::set_taskbar_hidden,
             widgets::weather,
             widgets::geocode,

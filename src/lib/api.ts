@@ -131,6 +131,19 @@ export const api = {
   placeCard: (width: number, height: number) => invoke<void>("place_card", { width, height }),
   closeCard: () => invoke<void>("close_card"),
   desktopWallpaper: (width: number, height: number) => invoke<string | null>("desktop_wallpaper", { width, height }),
+
+  // System controls
+  recycleFiles: (paths: string[]) => invoke<number>("recycle_files", { paths }),
+  appVolumes: () => invoke<AppVolume[]>("app_volumes"),
+  setAppVolume: (pid: number, level?: number, muted?: boolean) => invoke<void>("set_app_volume", { pid, level, muted }),
+  radios: () => invoke<RadioInfo[]>("list_radios"),
+  setRadio: (kind: string, on: boolean) => invoke<void>("set_radio", { kind, on }),
+  brightness: () => invoke<{ level: number | null; source: "external" | "panel" | null }>("get_brightness"),
+  setBrightness: (level: number) => invoke<void>("set_brightness", { level }),
+  recentFiles: (kind: FolderKind, limit: number) => invoke<FileItem[]>("recent_files", { kind, limit }),
+  revealFile: (path: string) => invoke<void>("reveal_file", { path }),
+  openKnownFolder: (kind: FolderKind) => invoke<void>("open_known_folder", { kind }),
+  screenTime: (days: number) => invoke<DayTime[]>("screen_time", { days }),
   toggleWidgets: () => invoke<void>("toggle_widgets"),
 
   // Widgets
@@ -166,6 +179,36 @@ export const api = {
   mediaControl: (action: "toggle" | "next" | "previous") => invoke<void>("media_control", { action }),
 };
 
+export interface AppVolume {
+  pid: number;
+  name: string;
+  exe: string;
+  level: number;
+  muted: boolean;
+}
+
+export interface RadioInfo {
+  kind: "wifi" | "bluetooth" | "cellular";
+  name: string;
+  on: boolean;
+}
+
+export type FolderKind = "downloads" | "screenshots" | "recent";
+
+export interface FileItem {
+  name: string;
+  path: string;
+  size: number;
+  modified: number;
+  isDir: boolean;
+}
+
+export interface DayTime {
+  date: string;
+  total: number;
+  apps: { exe: string; name: string; secs: number }[];
+}
+
 export type ShellAction =
   | "show-desktop"
   | "notifications"
@@ -175,7 +218,13 @@ export type ShellAction =
   | "sound-settings"
   | "language-settings"
   | "storage-settings"
-  | "recycle-bin";
+  | "recycle-bin"
+  | "hotspot"
+  | "airplane"
+  | "focus"
+  | "wifi-settings"
+  | "bluetooth-settings"
+  | "display-settings";
 
 export interface ProcessUsage {
   name: string;

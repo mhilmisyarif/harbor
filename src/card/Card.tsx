@@ -7,6 +7,7 @@ import { Backdrop } from "../lib/Backdrop";
 import { useConfig } from "../lib/config";
 import { useWidgetConfig } from "../lib/widgetConfig";
 import { WidgetProps } from "../widgets/kit";
+import * as Ctl from "../widgets/controls";
 import * as Me from "../widgets/media";
 import { PILL_KINDS } from "../widgets/pills";
 import * as P from "../widgets/productivity";
@@ -32,8 +33,13 @@ const GROUPS: { title: string; kinds: string[]; parts: Part[] }[] = [
   },
   {
     title: "Sound",
-    kinds: ["audio-output", "microphone"],
-    parts: [{ C: Me.AudioOutput, wide: true }, { C: Me.Microphone, wide: true }, { C: Me.NowPlayingCompact, wide: true }],
+    kinds: ["audio-output", "microphone", "app-mixer"],
+    parts: [{ C: Me.AudioOutput, wide: true }, { C: Ctl.AppMixer, wide: true }, { C: Me.Microphone, wide: true }, { C: Me.NowPlayingCompact, wide: true }],
+  },
+  {
+    title: "Controls",
+    kinds: ["quick-toggles", "brightness", "theme-toggle"],
+    parts: [{ C: Ctl.QuickToggles, wide: true }, { C: Ctl.Brightness, wide: true }, { C: S.ThemeToggle }, { C: S.Language }],
   },
   { title: "Now playing", kinds: ["now-playing", "now-playing-compact", "now-playing-bar", "now-playing-mini"], parts: [{ C: Me.NowPlaying, wide: true }] },
   {

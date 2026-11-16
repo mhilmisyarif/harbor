@@ -5,6 +5,7 @@ import { api, weatherLook } from "../lib/api";
 import { useMicrophone, useNetworkHistory, useNowPlaying, useStats, useSystemInfo, useVolume, useWeather } from "./data";
 import { Change, fmtBytes, fmtPrice, Ring, setShared, Spark, timeString, useNow, useShared, WidgetProps, zonedParts } from "./kit";
 import { fmtStopwatch, PHASE_LABEL, PomodoroSettings, useCountdown, usePomodoro, useStopwatch } from "./timers";
+import { fmtSecs, useBrightness, useFolder, useScreenTime } from "./controls";
 
 type P = WidgetProps<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -543,6 +544,70 @@ const LeetCodePill = ({ settings }: P) => {
   );
 };
 
+// ---------- Phase B controls ----------
+
+const TogglesPill = () => {
+  const { data: radios } = useShared("radios", api.radios, 4000);
+  const flip = async (kind: "wifi" | "bluetooth") => {
+    const r = radios?.find((x) => x.kind === kind);
+    if (!r) return api.shellAction(kind === "wifi" ? "wifi-settings" : "bluetooth-settings");
+    await api.setRadio(kind, !r.on).catch(console.warn);
+    setShared("radios", await api.radios());
+  };
+  const on = (k: string) => radios?.find((r) => r.kind === k)?.on;
+  return (
+    <Pill title="Quick toggles">
+      <RoundBtn label="Wi-Fi" onClick={() => flip("wifi")} accent={on("wifi") ? "#3b82f6" : undefined}>
+        📶
+      </RoundBtn>
+      <RoundBtn label="Bluetooth" onClick={() => flip("bluetooth")} accent={on("bluetooth") ? "#3b82f6" : undefined}>
+        🔵
+      </RoundBtn>
+      <RoundBtn label="Airplane mode" onClick={() => api.shellAction("airplane")}>
+        ✈️
+      </RoundBtn>
+    </Pill>
+  );
+};
+
+const BrightnessPill = () => {
+  const b = useBrightness();
+  if (b.loaded && !b.supported) return <Pill title="This display doesn't support software brightness">🔅 <span className="pill-sub">n/a</span></Pill>;
+  return (
+    <Pill className="pill-slider">
+      <span className="pill-icon">🔅</span>
+      <div className="pill-stack" onClick={(e) => e.stopPropagation()}>
+        <div className="pill-row">
+          <span className="pill-sub">Brightness</span>
+          <span className="pill-sub">{b.level}%</span>
+        </div>
+        <input type="range" className="w-range" aria-label="Brightness" min={0} max={100} value={b.level} onChange={(e) => b.setLocal(Number(e.target.value))} onPointerUp={b.commit} onKeyUp={b.commit} />
+      </div>
+    </Pill>
+  );
+};
+
+const folderPill = (kind: "downloads" | "screenshots" | "recent", icon: string, label: string): FC<P> =>
+  function FolderPill() {
+    const { data } = useFolder(kind, 1);
+    return (
+      <Pill title={data?.[0]?.path ?? label}>
+        <span className="pill-icon">{icon}</span>
+        <Stack top={<span className="pill-file w-ellipsis">{data?.[0]?.name ?? label}</span>} bottom={label} />
+      </Pill>
+    );
+  };
+
+const ScreenTimePill = () => {
+  const { data } = useScreenTime();
+  return (
+    <Pill title="Screen Time today">
+      <span className="pill-icon">⏱️</span>
+      <Stack top={<b>{fmtSecs(data?.[0]?.total ?? 0)}</b>} bottom="Screen Time" />
+    </Pill>
+  );
+};
+
 const PanelPill = () => (
   <Pill onClick={() => api.toggleWidgets()} title="Widgets">
     <span className="pill-icon">▦</span>
@@ -590,6 +655,12 @@ export const PILLS: Record<string, FC<P>> = {
   "recycle-bin": RecyclePill,
   search: SearchPill,
   leetcode: LeetCodePill,
+  "quick-toggles": TogglesPill,
+  brightness: BrightnessPill,
+  downloads: folderPill("downloads", "⬇️", "Downloads"),
+  screenshots: folderPill("screenshots", "🖼️", "Screenshots"),
+  "recent-files": folderPill("recent", "🕘", "Recent"),
+  "screen-time": ScreenTimePill,
 };
 
 export const PanelButtonPill = PanelPill;

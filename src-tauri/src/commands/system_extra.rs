@@ -158,6 +158,13 @@ pub fn shell_action(action: String) -> CmdResult<()> {
         "language-settings" => "ms-settings:regionlanguage",
         "storage-settings" => "ms-settings:storagesense",
         "recycle-bin" => "shell:RecycleBinFolder",
+        // No public API toggles these, so their tiles open the right Settings page.
+        "hotspot" => "ms-settings:network-mobilehotspot",
+        "airplane" => "ms-settings:network-airplanemode",
+        "focus" => "ms-settings:quiethours",
+        "wifi-settings" => "ms-settings:network-wifi",
+        "bluetooth-settings" => "ms-settings:bluetooth",
+        "display-settings" => "ms-settings:display",
         other => return Err(format!("unknown shell action {other}")),
     };
     launch_app(target.to_string())

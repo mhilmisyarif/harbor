@@ -353,3 +353,20 @@
 .w-lc-easy { color: #4ade80; }
 .w-lc-med { color: #fbbf24; }
 .w-lc-hard { color: #f87171; }
+
+/* ---------- Phase B controls ---------- */
+.w-qt-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.w-qt { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 4px; border-radius: 12px; background: rgba(var(--ink), 0.07); }
+.w-qt:hover { background: rgba(var(--ink), 0.12); }
+.w-qt.on { background: var(--accent); color: #0b1220; }
+.w-qt-icon { font-size: 18px; line-height: 1; }
+.w-mixer-row { display: flex; align-items: center; gap: 8px; }
+.w-mixer-icon { width: 24px; height: 24px; object-fit: contain; flex-shrink: 0; text-align: center; }
+.w-file { display: flex; align-items: center; gap: 4px; }
+.w-file-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 4px; border-radius: 8px; text-align: left; }
+.w-file-main:hover { background: rgba(var(--ink), 0.08); }
+.w-file-icon { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
+.w-block { display: block; }
+.w-st-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; height: 64px; align-items: end; }
+.w-st-day { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 2px; }
+.w-st-bar { width: 60%; min-height: 2px; border-radius: 3px; background: var(--accent); }

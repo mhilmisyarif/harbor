@@ -1,6 +1,7 @@
 // Every widget the panel can show. Adding one = a component + an entry here.
 import { FC } from "react";
 import { WidgetProps } from "./kit";
+import * as C from "./controls";
 import * as F from "./files";
 import * as M from "./markets";
 import * as Me from "./media";
@@ -91,6 +92,9 @@ export const WIDGETS: WidgetDef[] = [
   { kind: "language", name: "Keyboard layout", category: "System", size: "small", description: "Current layout; click to switch, right-click for settings.", defaults: {}, Component: S.Language },
   { kind: "show-desktop", name: "Show desktop", category: "System", size: "small", description: "Hide all windows, click again to restore.", defaults: {}, Component: S.ShowDesktop },
   { kind: "notifications", name: "Notifications", category: "System", size: "small", description: "Open the notification center.", defaults: {}, Component: S.NotificationsTile },
+  { kind: "quick-toggles", name: "Quick toggles", category: "System", size: "wide", description: "Wi-Fi and Bluetooth switches, plus hotspot, airplane mode and Focus shortcuts.", defaults: {}, Component: C.QuickToggles },
+  { kind: "brightness", name: "Brightness", category: "System", size: "wide", description: "Display brightness: external monitors (DDC/CI) or the laptop screen.", defaults: {}, Component: C.Brightness },
+  { kind: "screen-time", name: "Screen Time", category: "System", size: "wide", description: "Where today went, by app, with the last 7 days. Counted on this PC only.", defaults: {}, Component: C.ScreenTime },
   { kind: "keyboard", name: "On-screen keyboard", category: "System", size: "small", description: "Open the on-screen keyboard.", defaults: {}, Component: S.KeyboardTile },
 
   // Media
@@ -98,12 +102,16 @@ export const WIDGETS: WidgetDef[] = [
   { kind: "now-playing-compact", name: "Now playing (compact)", category: "Media", size: "wide", description: "Title, artist and play/pause.", defaults: {}, Component: Me.NowPlayingCompact },
   { kind: "now-playing-mini", name: "Now playing mini", category: "Media", size: "small", description: "A round play button with progress.", defaults: {}, Component: Me.NowPlayingMini },
   { kind: "now-playing-bar", name: "Now playing bar", category: "Media", size: "wide", description: "Track, progress bar and skip.", defaults: {}, Component: Me.NowPlayingBar },
-  { kind: "audio-output", name: "Sound", category: "Media", size: "wide", description: "Output volume and mute.", defaults: {}, Component: Me.AudioOutput },
+  { kind: "audio-output", name: "Sound", category: "Media", size: "wide", description: "Output volume and mute; its card has a per-app mixer.", defaults: {}, Component: Me.AudioOutput },
+  { kind: "app-mixer", name: "Volume mixer", category: "Media", size: "wide", description: "Each app's own volume, like Windows' volume mixer.", defaults: {}, Component: C.AppMixer },
   { kind: "microphone", name: "Mute", category: "Media", size: "wide", description: "Mute the microphone or all sound.", defaults: {}, Component: Me.Microphone },
 
   // Apps & files
   { kind: "recycle-bin", name: "Recycle Bin", category: "Apps & files", size: "small", description: "What's in the bin; empty it in one click.", defaults: {}, Component: F.RecycleBin },
   { kind: "search", name: "Search", category: "Apps & files", size: "wide", description: "Search the web, or open a folder path you type.", defaults: {}, Component: F.Search },
+  { kind: "downloads", name: "Downloads", category: "Apps & files", size: "wide", description: "Your newest downloads; open them or show them in their folder.", defaults: {}, Component: C.Downloads },
+  { kind: "screenshots", name: "Screenshots", category: "Apps & files", size: "wide", description: "Your latest screenshots.", defaults: {}, Component: C.Screenshots },
+  { kind: "recent-files", name: "Recently opened", category: "Apps & files", size: "wide", description: "Files and folders you opened recently.", defaults: {}, Component: C.RecentFiles },
   { kind: "screenshot", name: "Screenshot", category: "Apps & files", size: "small", description: "Capture the screen, a window or a region.", defaults: {}, Component: S.Screenshot },
 
   // Online

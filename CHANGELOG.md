@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The dock and bar hide while a game, video or presentation is fullscreen, and
+  come back when you leave it.
+- Drop files on the dock's Recycle Bin to recycle them (undoable from the bin).
+- Volume mixer: each app's own volume and mute, also in the Sound card.
+- Quick toggles: switch Wi-Fi and Bluetooth on or off; shortcuts for mobile
+  hotspot, airplane mode, Focus and display settings.
+- Brightness slider for external monitors (DDC/CI) and laptop screens.
+- Downloads, Screenshots and Recently opened widgets: open a file or show it in
+  its folder.
+- Screen Time: today's time by app and the last 7 days, counted only on this PC
+  (idle time is skipped).
+
 ## [0.0.3] - 2026-11-17
 
 ### Added
