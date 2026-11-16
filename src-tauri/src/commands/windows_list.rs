@@ -216,5 +216,6 @@ pub fn foreground_title() -> String {
     if pid == std::process::id() {
         return String::new();
     }
+    super::system_extra::note_foreground(h);
     window_title(h)
 }

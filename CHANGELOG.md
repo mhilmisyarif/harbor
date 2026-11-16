@@ -22,6 +22,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   running apps.
 - Store apps (such as Windows Terminal, WhatsApp or Spotify) are recognised by
   their app ID, so they get their real logo and pinning them launches the app.
+- Customizable widget panel: click **Edit** to add widgets from a searchable
+  gallery, reorder them, configure each one with ⚙, or remove them. The same
+  widget can be added more than once (for example, two stock charts).
+- 56 widgets that need no account or API key:
+  - Clocks: clock, flip clock, segment clock, analog, world clocks, world time,
+    date, day number, today, clock & weather, 7 days, and day, month and year
+    progress.
+  - Productivity: Pomodoro and timer (with a notification when they finish),
+    stopwatch with laps, todos, notes, calendar and currency.
+  - Weather: current, details (wind, rain, UV), today & forecast, conditions in
+    words, hourly, and sunrise & sunset.
+  - Markets: stock chart, stock watchlist, and crypto with a 24-hour line.
+  - System: CPU and RAM rings, top CPU and memory apps, network with a live
+    chart, storage, five battery styles, light/dark theme toggle, keyboard
+    layout switcher, show desktop, notifications and on-screen keyboard.
+  - Media: Now Playing in four layouts (with album art and controls for any app
+    that reports to Windows), output volume, and microphone mute.
+  - Apps & files: Recycle Bin, search (web search or open a typed folder path),
+    screenshot, and LeetCode stats from a public profile.
+- Several widgets showing the same data share one request.
 
 ### Changed
 

@@ -71,8 +71,8 @@ pub fn place_dock(app: &AppHandle, width: f64, height: f64, show: bool) -> tauri
 
 // ---------- Widget panel ----------
 
-const WIDGETS_W: f64 = 380.0;
-const WIDGETS_H: f64 = 640.0;
+const WIDGETS_W: f64 = 420.0;
+const WIDGETS_H: f64 = 780.0;
 
 static WIDGETS_HIDDEN_AT: std::sync::Mutex<Option<std::time::Instant>> =
     std::sync::Mutex::new(None);

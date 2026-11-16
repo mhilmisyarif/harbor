@@ -19,6 +19,7 @@ tauri-plugin-single-instance = "2"
 tauri-plugin-autostart = "2"
 tauri-plugin-global-shortcut = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 sysinfo = "0.33"
@@ -45,6 +46,13 @@ windows = { version = "0.58", features = [
   "Win32_Storage_EnhancedStorage",
   "Win32_Storage_Packaging_Appx",
   "Win32_UI_Shell_PropertiesSystem",
+  "Win32_System_Registry",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_Globalization",
+  # Now Playing (Windows media session API)
+  "Foundation",
+  "Media_Control",
+  "Storage_Streams",
 ] }
 
 [profile.release]

@@ -7,7 +7,7 @@ use tauri::State;
 use windows::Win32::System::Power::{GetSystemPowerStatus, SYSTEM_POWER_STATUS};
 
 #[derive(Default)]
-pub struct StatsState(Mutex<Option<System>>);
+pub struct StatsState(pub(crate) Mutex<Option<System>>);
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]

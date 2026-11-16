@@ -1,6 +1,6 @@
 mod commands;
 
-use commands::{apps, audio, icons, layout, stats, widgets, windows_list};
+use commands::{apps, audio, icons, layout, media, stats, system_extra, widgets, windows_list};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -76,6 +76,7 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(stats::StatsState::default())
         .manage(widgets::Http::default())
         .manage(widgets::NetState::default())
@@ -115,6 +116,19 @@ pub fn run() {
             audio::get_volume,
             audio::set_volume,
             audio::toggle_mute,
+            audio::get_microphone,
+            audio::toggle_microphone_mute,
+            media::now_playing,
+            media::media_control,
+            system_extra::top_processes,
+            system_extra::get_dark_mode,
+            system_extra::set_dark_mode,
+            system_extra::shell_action,
+            system_extra::search_or_open,
+            system_extra::recycle_bin_info,
+            system_extra::empty_recycle_bin,
+            system_extra::input_language,
+            system_extra::next_input_language,
             layout::layout_dock,
             layout::toggle_widgets,
             layout::open_settings,
@@ -127,6 +141,10 @@ pub fn run() {
             widgets::system_widgets,
             widgets::load_widget_config,
             widgets::save_widget_config,
+            widgets::load_widget_data,
+            widgets::save_widget_data,
+            widgets::crypto_chart,
+            widgets::leetcode,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Harbor");

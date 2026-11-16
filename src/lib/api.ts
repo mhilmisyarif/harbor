@@ -85,8 +85,80 @@ export const api = {
     invoke<{ base: string; date: string; rates: Record<string, number> }>("fx", { base, quotes }),
   systemWidgets: () => invoke<SystemInfo>("system_widgets"),
   loadWidgetConfig: () => invoke<WidgetConfig>("load_widget_config"),
-  saveWidgetConfig: (config: WidgetConfig) => invoke<void>("save_widget_config", { config }),
+  saveWidgetConfig: (config: WidgetConfig) => invoke<WidgetConfig>("save_widget_config", { config }),
+  loadWidgetData: <T>(key: string) => invoke<T | null>("load_widget_data", { key }),
+  saveWidgetData: (key: string, value: unknown) => invoke<void>("save_widget_data", { key, value }),
+  cryptoChart: (symbol: string) => invoke<number[]>("crypto_chart", { symbol }),
+  leetcode: (username: string) => invoke<LeetCodeResponse>("leetcode", { username }),
+
+  // Local PC
+  topProcesses: (by: "cpu" | "ram", limit: number) => invoke<ProcessUsage[]>("top_processes", { by, limit }),
+  getDarkMode: () => invoke<boolean>("get_dark_mode"),
+  setDarkMode: (dark: boolean) => invoke<boolean>("set_dark_mode", { dark }),
+  shellAction: (action: ShellAction) => invoke<void>("shell_action", { action }),
+  searchOrOpen: (query: string) => invoke<void>("search_or_open", { query }),
+  recycleBin: () => invoke<{ items: number; bytes: number }>("recycle_bin_info"),
+  emptyRecycleBin: () => invoke<void>("empty_recycle_bin"),
+  inputLanguage: () => invoke<InputLanguage>("input_language"),
+  nextInputLanguage: () => invoke<InputLanguage>("next_input_language"),
+  microphone: () => invoke<Volume>("get_microphone"),
+  toggleMicrophone: () => invoke<Volume>("toggle_microphone_mute"),
+  nowPlaying: () => invoke<NowPlaying | null>("now_playing"),
+  mediaControl: (action: "toggle" | "next" | "previous") => invoke<void>("media_control", { action }),
 };
+
+export type ShellAction =
+  | "show-desktop"
+  | "notifications"
+  | "keyboard"
+  | "screenshot"
+  | "task-manager"
+  | "sound-settings"
+  | "language-settings"
+  | "storage-settings"
+  | "recycle-bin";
+
+export interface ProcessUsage {
+  name: string;
+  cpu: number;
+  memory: number;
+  count: number;
+}
+
+export interface InputLanguage {
+  short: string;
+  name: string;
+  available: number;
+}
+
+export interface NowPlaying {
+  title: string;
+  artist: string;
+  album: string;
+  app: string;
+  playing: boolean;
+  positionSecs: number;
+  durationSecs: number;
+  art: string | null;
+}
+
+export interface LeetCodeResponse {
+  data?: {
+    matchedUser: {
+      username: string;
+      submitStatsGlobal: { acSubmissionNum: { difficulty: string; count: number }[] };
+      userCalendar: { streak: number; totalActiveDays: number } | null;
+    } | null;
+    allQuestionsCount: { difficulty: string; count: number }[];
+  };
+  errors?: { message: string }[];
+}
+
+export interface WidgetInstance {
+  id: string;
+  kind: string;
+  settings: Record<string, unknown>;
+}
 
 export interface Location {
   name: string;
@@ -101,23 +173,41 @@ export interface WidgetConfig {
   crypto: string[];
   fxBase: string;
   fxQuotes: string[];
+  layout: WidgetInstance[];
 }
 
 export interface WeatherResponse {
   current: {
+    time: string;
     temperature_2m: number;
     apparent_temperature: number;
     relative_humidity_2m: number;
     weather_code: number;
     wind_speed_10m: number;
+    wind_direction_10m: number;
+    precipitation: number;
     is_day: number;
   };
-  current_units: { temperature_2m: string; wind_speed_10m: string };
+  current_units: { temperature_2m: string; wind_speed_10m: string; precipitation: string };
+  utc_offset_seconds: number;
+  hourly: {
+    time: string[];
+    temperature_2m: number[];
+    weather_code: number[];
+    precipitation_probability: number[];
+    is_day: number[];
+  };
   daily: {
     time: string[];
     weather_code: number[];
     temperature_2m_max: number[];
     temperature_2m_min: number[];
+    sunrise: string[];
+    sunset: string[];
+    precipitation_sum: number[];
+    precipitation_probability_max: number[];
+    wind_speed_10m_max: number[];
+    uv_index_max: number[];
   };
 }
 

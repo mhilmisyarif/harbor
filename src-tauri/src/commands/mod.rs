@@ -7,7 +7,9 @@ pub mod apps;
 pub mod audio;
 pub mod icons;
 pub mod layout;
+pub mod media;
 pub mod stats;
+pub mod system_extra;
 pub mod widgets;
 pub mod windows_list;
 

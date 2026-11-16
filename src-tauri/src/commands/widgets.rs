@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use sysinfo::{Disks, Networks};
-use tauri::{AppHandle, Manager, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use super::{err, CmdResult};
 
@@ -65,6 +65,32 @@ impl Http {
     }
 }
 
+impl Http {
+    /// POST a JSON body to a fixed endpoint, cached by URL + body.
+    async fn post_json(&self, url: &str, body: Value, ttl: Duration) -> CmdResult<Value> {
+        let key = format!("{url}\n{body}");
+        if let Some(v) = self.cached(&key, ttl) {
+            return Ok(v);
+        }
+        let resp = self
+            .client
+            .post(url)
+            .header("Referer", "https://leetcode.com")
+            .json(&body)
+            .send()
+            .await
+            .map_err(|e| format!("could not reach {url}: {e}"))?;
+        if !resp.status().is_success() {
+            return Err(format!("{url} returned {}", resp.status()));
+        }
+        let value: Value = resp.json().await.map_err(err)?;
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.insert(key, (Instant::now(), value.clone()));
+        }
+        Ok(value)
+    }
+}
+
 fn url(base: &str, params: &[(&str, String)]) -> CmdResult<reqwest::Url> {
     reqwest::Url::parse_with_params(base, params).map_err(err)
 }
@@ -93,12 +119,21 @@ pub async fn weather(
         ("longitude", format!("{lon:.4}")),
         (
             "current",
-            "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,is_day"
+            "temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,precipitation,is_day"
                 .into(),
         ),
-        ("daily", "weather_code,temperature_2m_max,temperature_2m_min".into()),
+        (
+            "hourly",
+            "temperature_2m,weather_code,precipitation_probability,is_day".into(),
+        ),
+        (
+            "daily",
+            "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,uv_index_max"
+                .into(),
+        ),
         ("timezone", "auto".into()),
-        ("forecast_days", "5".into()),
+        ("forecast_days", "7".into()),
+        ("forecast_hours", "24".into()),
     ];
     if imperial {
         params.push(("temperature_unit", "fahrenheit".into()));
@@ -172,6 +207,55 @@ pub async fn crypto(http: State<'_, Http>, symbols: Vec<String>) -> CmdResult<Va
         &[("symbols", serde_json::to_string(&list).map_err(err)?)],
     )?;
     http.get(u, Duration::from_secs(30)).await
+}
+
+/// Hourly closes for the last 24 hours, for the Crypto widget's line.
+#[tauri::command]
+pub async fn crypto_chart(http: State<'_, Http>, symbol: String) -> CmdResult<Vec<f64>> {
+    let sym = symbol.trim().to_uppercase();
+    if sym.is_empty() || sym.len() > 20 || !sym.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err("invalid symbol".into());
+    }
+    let u = url(
+        "https://data-api.binance.vision/api/v3/klines",
+        &[
+            ("symbol", sym),
+            ("interval", "1h".into()),
+            ("limit", "24".into()),
+        ],
+    )?;
+    let v = http.get(u, 5 * MIN).await?;
+    // Each kline is [openTime, open, high, low, close, ...] with prices as strings.
+    Ok(v.as_array()
+        .map(|rows| {
+            rows.iter()
+                .filter_map(|r| r.get(4)?.as_str()?.parse::<f64>().ok())
+                .collect()
+        })
+        .unwrap_or_default())
+}
+
+// ---------- LeetCode (public profile data) ----------
+
+fn valid_username(s: &str) -> bool {
+    !s.is_empty()
+        && s.len() <= 40
+        && s.chars()
+            .all(|c| c.is_ascii_alphanumeric() || matches!(c, '_' | '-' | '.'))
+}
+
+#[tauri::command]
+pub async fn leetcode(http: State<'_, Http>, username: String) -> CmdResult<Value> {
+    let user = username.trim().trim_start_matches('@').to_string();
+    if !valid_username(&user) {
+        return Err("enter a LeetCode username".into());
+    }
+    let body = json!({
+        "query": "query($u: String!) { matchedUser(username: $u) { username submitStatsGlobal { acSubmissionNum { difficulty count } } userCalendar { streak totalActiveDays } } allQuestionsCount { difficulty count } }",
+        "variables": { "u": user },
+    });
+    http.post_json("https://leetcode.com/graphql", body, 30 * MIN)
+        .await
 }
 
 // ---------- Currency (Frankfurter / ECB rates) ----------
@@ -267,20 +351,43 @@ pub struct Location {
     pub lon: f64,
 }
 
+pub const WIDGET_CONFIG_EVENT: &str = "widget-config-changed";
+
+const MAX_WIDGETS: usize = 60;
+const MAX_WIDGET_SETTINGS_BYTES: usize = 16 * 1024;
+
+/// One widget placed in the panel. `kind` selects the frontend component;
+/// `settings` is that component's own options (shape owned by the frontend).
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct WidgetInstance {
+    pub id: String,
+    pub kind: String,
+    #[serde(default)]
+    pub settings: Value,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase", default)]
 pub struct WidgetConfig {
+    /// Shared defaults several widgets use (location, units, symbol lists).
     pub location: Option<Location>,
     pub imperial: bool,
     pub stocks: Vec<String>,
     pub crypto: Vec<String>,
     pub fx_base: String,
     pub fx_quotes: Vec<String>,
+    /// Widgets in panel order.
+    pub layout: Vec<WidgetInstance>,
 }
 
 impl Default for WidgetConfig {
     fn default() -> Self {
         let v = |xs: &[&str]| xs.iter().map(|s| s.to_string()).collect();
+        let w = |id: &str, kind: &str| WidgetInstance {
+            id: id.into(),
+            kind: kind.into(),
+            settings: json!({}),
+        };
         Self {
             location: None,
             imperial: false,
@@ -288,7 +395,42 @@ impl Default for WidgetConfig {
             crypto: v(&["BTCUSDT", "ETHUSDT", "SOLUSDT"]),
             fx_base: "USD".into(),
             fx_quotes: v(&["EUR", "GBP", "JPY", "IDR"]),
+            layout: vec![
+                w("w1", "clock"),
+                w("w2", "weather"),
+                w("w3", "forecast"),
+                w("w4", "now-playing"),
+                w("w5", "cpu-ring"),
+                w("w6", "ram-ring"),
+                w("w7", "stock-watchlist"),
+                w("w8", "crypto"),
+                w("w9", "network"),
+                w("w10", "calendar"),
+            ],
         }
+    }
+}
+
+impl WidgetConfig {
+    fn sanitized(mut self) -> Self {
+        let mut seen = std::collections::HashSet::new();
+        self.layout.retain(|w| {
+            let ok_id = !w.id.is_empty() && w.id.len() <= 40;
+            let ok_kind = !w.kind.is_empty()
+                && w.kind.len() <= 40
+                && w.kind
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-');
+            let ok_size = w.settings.to_string().len() <= MAX_WIDGET_SETTINGS_BYTES;
+            ok_id && ok_kind && ok_size && seen.insert(w.id.clone())
+        });
+        for w in &mut self.layout {
+            if !w.settings.is_object() {
+                w.settings = json!({});
+            }
+        }
+        self.layout.truncate(MAX_WIDGETS);
+        self
     }
 }
 
@@ -301,18 +443,59 @@ fn widgets_path(app: &AppHandle) -> CmdResult<PathBuf> {
 #[tauri::command]
 pub fn load_widget_config(app: AppHandle) -> CmdResult<WidgetConfig> {
     let path = widgets_path(&app)?;
-    Ok(fs::read_to_string(path)
+    let config: WidgetConfig = fs::read_to_string(path)
         .ok()
         .and_then(|t| serde_json::from_str(&t).ok())
-        .unwrap_or_default())
+        .unwrap_or_default();
+    Ok(config.sanitized())
 }
 
 #[tauri::command]
-pub fn save_widget_config(app: AppHandle, config: WidgetConfig) -> CmdResult<()> {
+pub fn save_widget_config(app: AppHandle, config: WidgetConfig) -> CmdResult<WidgetConfig> {
+    let config = config.sanitized();
     let path = widgets_path(&app)?;
-    let tmp = path.with_extension("json.tmp");
-    fs::write(&tmp, serde_json::to_string_pretty(&config).map_err(err)?).map_err(err)?;
-    fs::rename(&tmp, &path).map_err(err)
+    write_atomic(&path, &serde_json::to_string_pretty(&config).map_err(err)?)?;
+    let _ = app.emit(WIDGET_CONFIG_EVENT, &config);
+    Ok(config)
+}
+
+fn write_atomic(path: &std::path::Path, text: &str) -> CmdResult<()> {
+    let tmp = path.with_extension("tmp");
+    fs::write(&tmp, text).map_err(err)?;
+    fs::rename(&tmp, path).map_err(err)
+}
+
+// ---------- Widget data (todos, notes): user content, kept apart from settings ----------
+
+/// Keys are widget-instance scoped, e.g. `todos-w12`; only a safe charset reaches the filesystem.
+fn data_path(app: &AppHandle, key: &str) -> CmdResult<PathBuf> {
+    let ok = !key.is_empty()
+        && key.len() <= 60
+        && key.chars().all(|c| c.is_ascii_alphanumeric() || c == '-');
+    if !ok {
+        return Err("invalid widget data key".into());
+    }
+    let dir = app.path().app_data_dir().map_err(err)?.join("widget-data");
+    fs::create_dir_all(&dir).map_err(err)?;
+    Ok(dir.join(format!("{key}.json")))
+}
+
+#[tauri::command]
+pub fn load_widget_data(app: AppHandle, key: String) -> CmdResult<Value> {
+    let path = data_path(&app, &key)?;
+    Ok(fs::read_to_string(path)
+        .ok()
+        .and_then(|t| serde_json::from_str(&t).ok())
+        .unwrap_or(Value::Null))
+}
+
+#[tauri::command]
+pub fn save_widget_data(app: AppHandle, key: String, value: Value) -> CmdResult<()> {
+    let text = serde_json::to_string(&value).map_err(err)?;
+    if text.len() > 512 * 1024 {
+        return Err("that note is too large to save".into());
+    }
+    write_atomic(&data_path(&app, &key)?, &text)
 }
 
 #[cfg(test)]
@@ -343,6 +526,33 @@ mod tests {
         assert_eq!(c.fx_base, "USD");
         assert!(!c.stocks.is_empty());
         assert!(c.location.is_none());
+    }
+
+    #[test]
+    fn layout_sanitize_drops_bad_and_duplicate_widgets() {
+        let mut c = WidgetConfig::default();
+        let first = c.layout[0].clone();
+        c.layout.push(first); // duplicate id
+        c.layout.push(WidgetInstance {
+            id: "x".into(),
+            kind: "../evil".into(),
+            settings: json!({}),
+        });
+        c.layout.push(WidgetInstance {
+            id: "y".into(),
+            kind: "notes".into(),
+            settings: json!("not an object"),
+        });
+        let n_defaults = WidgetConfig::default().layout.len();
+        let c = c.sanitized();
+        assert_eq!(c.layout.len(), n_defaults + 1);
+        assert!(c.layout.last().unwrap().settings.is_object());
+    }
+
+    #[test]
+    fn old_widget_files_get_the_default_layout() {
+        let c: WidgetConfig = serde_json::from_str(r#"{"imperial": true}"#).unwrap();
+        assert!(!c.layout.is_empty());
     }
 
     #[test]
