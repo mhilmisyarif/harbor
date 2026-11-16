@@ -6,6 +6,7 @@ import { useMicrophone, useNetworkHistory, useNowPlaying, useStats, useSystemInf
 import { Change, fmtBytes, fmtPrice, Ring, setShared, Spark, timeString, useNow, useShared, WidgetProps, zonedParts } from "./kit";
 import { fmtStopwatch, PHASE_LABEL, PomodoroSettings, useCountdown, usePomodoro, useStopwatch } from "./timers";
 import { fmtSecs, useBrightness, useFolder, useScreenTime } from "./controls";
+import { nextEvent, relative, useEvents } from "./calendar";
 
 type P = WidgetProps<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -608,6 +609,20 @@ const ScreenTimePill = () => {
   );
 };
 
+const NextEventPill = () => {
+  const { data } = useEvents(14);
+  const now = useNow(30_000).getTime();
+  const e = nextEvent(data?.events, now);
+  if (!e) return <Pill title="No upcoming events">📅 <span className="pill-sub">No events</span></Pill>;
+  const live = now >= e.start;
+  return (
+    <Pill title={`${e.title} · ${e.calendar}`} className={live ? "pill-active" : ""}>
+      <span className="pill-event-bar" style={{ background: e.color }} />
+      <Stack top={<span className="pill-file w-ellipsis">{e.title}</span>} bottom={relative(e, now)} />
+    </Pill>
+  );
+};
+
 const PanelPill = () => (
   <Pill onClick={() => api.toggleWidgets()} title="Widgets">
     <span className="pill-icon">▦</span>
@@ -661,6 +676,7 @@ export const PILLS: Record<string, FC<P>> = {
   screenshots: folderPill("screenshots", "🖼️", "Screenshots"),
   "recent-files": folderPill("recent", "🕘", "Recent"),
   "screen-time": ScreenTimePill,
+  agenda: NextEventPill,
 };
 
 export const PanelButtonPill = PanelPill;

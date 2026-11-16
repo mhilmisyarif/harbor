@@ -370,3 +370,13 @@
 .w-st-week { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; height: 64px; align-items: end; }
 .w-st-day { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 2px; }
 .w-st-bar { width: 60%; min-height: 2px; border-radius: 3px; background: var(--accent); }
+
+/* ---------- calendar events ---------- */
+.w-agenda-day { display: flex; flex-direction: column; gap: 4px; }
+.w-agenda-day + .w-agenda-day { margin-top: 4px; }
+.w-event { display: flex; align-items: center; gap: 8px; padding: 4px 6px; border-radius: 8px; }
+.w-event.now { background: rgba(var(--ink), 0.07); }
+.w-event-bar { width: 3px; align-self: stretch; border-radius: 2px; flex-shrink: 0; }
+.w-cal span.w-busy { position: relative; }
+.w-cal span.w-busy::after { content: ""; position: absolute; left: 50%; bottom: 1px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
+.w-cal span.w-today.w-busy::after { background: #0b1220; }

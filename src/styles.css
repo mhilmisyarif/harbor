@@ -308,3 +308,4 @@ button.bar-item:hover { background: rgba(var(--ink), 0.1); }
 .dock-add { font-size: 18px; }
 .pill-update { background: var(--accent) !important; color: #0b1220; font-weight: 700; }
 .pill-file { max-width: 140px; display: inline-block; font-weight: 600; }
+.pill-event-bar { width: 4px; align-self: stretch; margin: 10px 0; border-radius: 2px; }

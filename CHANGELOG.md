@@ -20,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   its folder.
 - Screen Time: today's time by app and the last 7 days, counted only on this PC
   (idle time is skipped).
+- Calendars: add Google, Outlook or iCloud calendars by their secret iCal link
+  (Settings → Calendars). Events appear in the calendar card, as dots on the
+  month, in the new **Up next** widget and as a "next event" dock pill.
+  Repeating events, exceptions and moved occurrences are handled.
+- Automations (Settings → Automations): reminders before events, pausing music
+  when a meeting starts, and quiet hours that hold Harbor's notifications.
 
 ## [0.0.3] - 2026-11-17
 

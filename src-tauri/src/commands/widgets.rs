@@ -91,6 +91,34 @@ impl Http {
     }
 }
 
+impl Http {
+    /// GET a text body (e.g. an iCalendar feed), cached like JSON responses.
+    pub(crate) async fn get_text(&self, url: reqwest::Url, ttl: Duration) -> CmdResult<String> {
+        let key = format!("text:{url}");
+        if let Some(Value::String(s)) = self.cached(&key, ttl) {
+            return Ok(s);
+        }
+        let host = url.host_str().unwrap_or("server").to_string();
+        let resp = self
+            .client
+            .get(url)
+            .send()
+            .await
+            .map_err(|e| format!("could not reach {host}: {e}"))?;
+        if !resp.status().is_success() {
+            return Err(format!("{host} returned {}", resp.status()));
+        }
+        let text = resp.text().await.map_err(err)?;
+        if text.len() > 20 * 1024 * 1024 {
+            return Err(format!("{host} sent more than 20 MB"));
+        }
+        if let Ok(mut cache) = self.cache.lock() {
+            cache.insert(key, (Instant::now(), Value::String(text.clone())));
+        }
+        Ok(text)
+    }
+}
+
 fn url(base: &str, params: &[(&str, String)]) -> CmdResult<reqwest::Url> {
     reqwest::Url::parse_with_params(base, params).map_err(err)
 }
@@ -356,6 +384,15 @@ pub const WIDGET_CONFIG_EVENT: &str = "widget-config-changed";
 const MAX_WIDGETS: usize = 60;
 const MAX_WIDGET_SETTINGS_BYTES: usize = 16 * 1024;
 
+/// A calendar subscribed by its secret iCal link.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct CalendarSource {
+    pub id: String,
+    pub name: String,
+    pub url: String,
+    pub color: String,
+}
+
 /// One widget placed in the panel. `kind` selects the frontend component;
 /// `settings` is that component's own options (shape owned by the frontend).
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
@@ -378,6 +415,8 @@ pub struct WidgetConfig {
     pub fx_quotes: Vec<String>,
     /// Widgets in panel order.
     pub layout: Vec<WidgetInstance>,
+    /// iCal feeds shown in the calendar card and used by automations.
+    pub calendars: Vec<CalendarSource>,
 }
 
 impl Default for WidgetConfig {
@@ -407,6 +446,7 @@ impl Default for WidgetConfig {
                 w("w9", "network"),
                 w("w10", "calendar"),
             ],
+            calendars: Vec::new(),
         }
     }
 }
@@ -430,6 +470,32 @@ impl WidgetConfig {
             }
         }
         self.layout.truncate(MAX_WIDGETS);
+        // Calendar links: https only (webcal:// is the same feed over https).
+        self.calendars = std::mem::take(&mut self.calendars)
+            .into_iter()
+            .filter_map(|mut c| {
+                let url = c.url.trim();
+                let url = url
+                    .strip_prefix("webcal://")
+                    .map(|r| format!("https://{r}"))
+                    .unwrap_or_else(|| url.to_string());
+                let ok = url.starts_with("https://")
+                    && url.len() <= 2048
+                    && reqwest::Url::parse(&url).is_ok();
+                ok.then(|| {
+                    c.url = url;
+                    c.name = c.name.trim().chars().take(40).collect();
+                    if c.name.is_empty() {
+                        c.name = "Calendar".into();
+                    }
+                    if !(c.color.starts_with('#') && c.color.len() <= 9) {
+                        c.color = "#60a5fa".into();
+                    }
+                    c
+                })
+            })
+            .take(20)
+            .collect();
         self
     }
 }
@@ -547,6 +613,34 @@ mod tests {
         let c = c.sanitized();
         assert_eq!(c.layout.len(), n_defaults + 1);
         assert!(c.layout.last().unwrap().settings.is_object());
+    }
+
+    #[test]
+    fn calendar_links_must_be_https() {
+        let mut c = WidgetConfig::default();
+        let cal = |url: &str| CalendarSource {
+            id: "c".into(),
+            name: " Work ".into(),
+            url: url.into(),
+            color: "red".into(),
+        };
+        c.calendars = vec![
+            cal("webcal://p01-caldav.icloud.com/x.ics"),
+            cal("http://insecure.example/x.ics"),
+            cal("file:///C:/x.ics"),
+            cal("https://calendar.google.com/x/basic.ics"),
+        ];
+        let c = c.sanitized();
+        let urls: Vec<_> = c.calendars.iter().map(|c| c.url.as_str()).collect();
+        assert_eq!(
+            urls,
+            [
+                "https://p01-caldav.icloud.com/x.ics",
+                "https://calendar.google.com/x/basic.ics"
+            ]
+        );
+        assert_eq!(c.calendars[0].name, "Work");
+        assert_eq!(c.calendars[0].color, "#60a5fa");
     }
 
     #[test]

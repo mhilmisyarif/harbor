@@ -5,6 +5,8 @@ compile_error!("Harbor targets Windows only.");
 pub mod appbar;
 pub mod apps;
 pub mod audio;
+pub mod automations;
+pub mod calendar;
 pub mod icons;
 pub mod layout;
 pub mod media;

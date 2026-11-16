@@ -183,3 +183,11 @@ body[data-surface="settings"] #root {
 .s-style-preview { width: 100%; height: 38px; border-radius: 8px; display: flex; align-items: flex-end; justify-content: center; gap: 4px; padding-bottom: 6px; border: 1px solid rgba(255, 255, 255, 0.12); }
 .s-style-pill { width: 28%; height: 12px; border-radius: 4px; background: rgba(255, 255, 255, 0.35); }
 .s-style-pill.light { background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); }
+
+/* calendars & automations */
+.s-cal-name { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1; }
+.s-color { width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: none; flex-shrink: 0; }
+.s-cal-add { gap: 6px; }
+.s-cal-input-name { width: 130px; flex-shrink: 0; }
+.s-select, .s-time { width: auto; }
+.s-input:disabled, .s-select:disabled { opacity: 0.45; }

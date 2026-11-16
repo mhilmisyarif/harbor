@@ -7,6 +7,7 @@ import { Backdrop } from "../lib/Backdrop";
 import { useConfig } from "../lib/config";
 import { useWidgetConfig } from "../lib/widgetConfig";
 import { WidgetProps } from "../widgets/kit";
+import * as Cal from "../widgets/calendar";
 import * as Ctl from "../widgets/controls";
 import * as Me from "../widgets/media";
 import { PILL_KINDS } from "../widgets/pills";
@@ -23,8 +24,8 @@ type Part = { C: FC<WidgetProps<any>>; wide?: boolean }; // eslint-disable-line 
 const GROUPS: { title: string; kinds: string[]; parts: Part[] }[] = [
   {
     title: "Calendar",
-    kinds: ["clock", "flip-clock", "segment-clock", "date", "day-number", "clock-weather", "world-time", "analog", "day-progress"],
-    parts: [{ C: T.Clock, wide: true }, { C: P.Calendar, wide: true }, { C: T.DayProgress }, { C: T.MonthProgress }],
+    kinds: ["clock", "flip-clock", "segment-clock", "date", "day-number", "clock-weather", "world-time", "analog", "day-progress", "agenda", "next-event"],
+    parts: [{ C: T.Clock, wide: true }, { C: Cal.Agenda, wide: true }, { C: P.Calendar, wide: true }],
   },
   {
     title: "Weather",

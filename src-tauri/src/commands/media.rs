@@ -118,6 +118,22 @@ fn read_now_playing() -> windows::core::Result<Option<NowPlaying>> {
     }))
 }
 
+/// Pauses the current media session if it is playing; true if it paused something.
+pub(crate) fn pause_if_playing() -> bool {
+    let Ok(Some(session)) = current_session() else {
+        return false;
+    };
+    let playing = session
+        .GetPlaybackInfo()
+        .and_then(|i| i.PlaybackStatus())
+        .is_ok_and(|s| s == Status::Playing);
+    playing
+        && session
+            .TryPauseAsync()
+            .and_then(|op| op.get())
+            .unwrap_or(false)
+}
+
 #[tauri::command]
 pub async fn now_playing() -> CmdResult<Option<NowPlaying>> {
     tauri::async_runtime::spawn_blocking(|| read_now_playing().map_err(err))

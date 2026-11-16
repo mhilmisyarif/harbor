@@ -304,8 +304,28 @@ export function beep(times = 3) {
   }
 }
 
+/** Quiet hours (Settings → Automations) hold Harbor's notifications. */
+async function inQuietHours() {
+  try {
+    const { invoke } = await import("@tauri-apps/api/core");
+    const c = await invoke<{ automations: { quietHours: boolean; quietStart: string; quietEnd: string } }>("load_config");
+    const a = c.automations;
+    if (!a.quietHours) return false;
+    const mins = (s: string) => {
+      const [h, m] = s.split(":").map(Number);
+      return h * 60 + m;
+    };
+    const now = new Date().getHours() * 60 + new Date().getMinutes();
+    const [s, e] = [mins(a.quietStart), mins(a.quietEnd)];
+    return s <= e ? now >= s && now < e : now >= s || now < e;
+  } catch {
+    return false;
+  }
+}
+
 /** System notification when a timer or Pomodoro phase finishes. */
 export async function notify(title: string, body: string) {
+  if (await inQuietHours()) return;
   beep();
   try {
     const n = await import("@tauri-apps/plugin-notification");

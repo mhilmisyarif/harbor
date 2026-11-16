@@ -5,6 +5,7 @@ import { AppearanceStyle, BarSettings, Config, DockSettings, exeName, PinnedApp,
 import { iconKey, useConfig, useIcons } from "../lib/config";
 import { pickApp, pickIcon } from "../lib/pickIcon";
 import { DockLayoutSection } from "./DockLayout";
+import { AutomationsSection, CalendarsSection } from "./Smart";
 import { useUpdater } from "../lib/updates";
 import { fmtBytes } from "../widgets/kit";
 
@@ -374,6 +375,8 @@ export function Settings() {
       <DockSection dock={config.dock} update={update} />
       <PinnedSection config={config} update={update} />
       <BarSection bar={config.bar} update={update} />
+      <CalendarsSection Row={Row} />
+      <AutomationsSection config={config} update={update} Row={Row} Toggle={Toggle} />
       <GeneralSection />
       <UpdatesSection config={config} update={update} />
     </main>

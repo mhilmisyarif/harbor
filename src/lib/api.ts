@@ -96,6 +96,7 @@ export interface Config {
   bar: BarSettings;
   updates: UpdateSettings;
   appearance: Appearance;
+  automations: Automations;
   /** Custom PNG data-URL icons keyed by lower-cased icon source. */
   iconOverrides: Record<string, string>;
 }
@@ -144,6 +145,7 @@ export const api = {
   revealFile: (path: string) => invoke<void>("reveal_file", { path }),
   openKnownFolder: (kind: FolderKind) => invoke<void>("open_known_folder", { kind }),
   screenTime: (days: number) => invoke<DayTime[]>("screen_time", { days }),
+  calendarEvents: (days: number) => invoke<{ events: CalEvent[]; errors: string[] }>("calendar_events", { days }),
   toggleWidgets: () => invoke<void>("toggle_widgets"),
 
   // Widgets
@@ -201,6 +203,33 @@ export interface FileItem {
   size: number;
   modified: number;
   isDir: boolean;
+}
+
+export interface CalEvent {
+  id: string;
+  calendar: string;
+  color: string;
+  title: string;
+  location: string;
+  start: number;
+  end: number;
+  allDay: boolean;
+}
+
+export interface CalendarSource {
+  id: string;
+  name: string;
+  url: string;
+  color: string;
+}
+
+export interface Automations {
+  pauseMediaForMeetings: boolean;
+  remindBeforeEvents: boolean;
+  remindMinutes: number;
+  quietHours: boolean;
+  quietStart: string;
+  quietEnd: string;
 }
 
 export interface DayTime {
@@ -282,6 +311,7 @@ export interface WidgetConfig {
   fxBase: string;
   fxQuotes: string[];
   layout: WidgetInstance[];
+  calendars: CalendarSource[];
 }
 
 export interface WeatherResponse {

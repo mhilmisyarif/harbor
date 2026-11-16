@@ -1,6 +1,7 @@
 // Every widget the panel can show. Adding one = a component + an entry here.
 import { FC } from "react";
 import { WidgetProps } from "./kit";
+import * as Cal from "./calendar";
 import * as C from "./controls";
 import * as F from "./files";
 import * as M from "./markets";
@@ -60,6 +61,7 @@ export const WIDGETS: WidgetDef[] = [
   { kind: "stopwatch", name: "Stopwatch", category: "Productivity", size: "wide", description: "Elapsed time with laps.", defaults: {}, Component: P.Stopwatch },
   { kind: "todos", name: "Todos", category: "Productivity", size: "wide", description: "Your next task and a checklist with progress.", defaults: {}, Component: P.Todos },
   { kind: "notes", name: "Notes", category: "Productivity", size: "wide", description: "A note that saves as you type.", defaults: {}, Component: P.Notes },
+  { kind: "agenda", name: "Up next", category: "Productivity", size: "wide", description: "Your next events from Google, Outlook or iCloud (add calendars in Settings).", defaults: {}, Component: Cal.Agenda },
   { kind: "calendar", name: "Calendar", category: "Productivity", size: "wide", description: "Month view.", defaults: {}, Component: P.Calendar },
   { kind: "currency", name: "Currency", category: "Productivity", size: "wide", description: "Convert amounts at ECB reference rates.", defaults: {}, Component: P.Currency },
 

@@ -1,6 +1,7 @@
 // Pomodoro, timer, stopwatch, todos, notes, calendar and currency.
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
+import { useEventDays } from "./calendar";
 import { fmtPrice, Ring, Tile, useNow, useShared, WidgetProps } from "./kit";
 import { fmtStopwatch, PHASE_LABEL, PomodoroSettings, useCountdown, usePomodoro, useStopwatch } from "./timers";
 
@@ -235,6 +236,7 @@ export function Calendar() {
     return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const today = useNow(60_000);
+  const eventDays = useEventDays();
   const firstWeekday = (month.getDay() + 6) % 7; // Monday first
   const days = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: days }, (_, i) => i + 1)];
@@ -259,11 +261,14 @@ export function Calendar() {
             {d}
           </span>
         ))}
-        {cells.map((d, i) => (
-          <span key={i} className={d && isToday(d) ? "w-today" : ""}>
-            {d ?? ""}
-          </span>
-        ))}
+        {cells.map((d, i) => {
+          const busy = d && eventDays.has(new Date(month.getFullYear(), month.getMonth(), d).toDateString());
+          return (
+            <span key={i} className={(d && isToday(d) ? "w-today" : "") + (busy ? " w-busy" : "")}>
+              {d ?? ""}
+            </span>
+          );
+        })}
       </div>
     </Tile>
   );

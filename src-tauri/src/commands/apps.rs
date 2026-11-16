@@ -141,6 +141,50 @@ impl Default for Appearance {
     }
 }
 
+/// Things the widgets do together ("smart dock"); each is one switch in Settings.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Automations {
+    /// Pause music/video when a calendar event starts.
+    pub pause_media_for_meetings: bool,
+    /// Notify before calendar events.
+    pub remind_before_events: bool,
+    pub remind_minutes: u32,
+    /// Hold Harbor's notifications between `quiet_start` and `quiet_end` (HH:MM, local).
+    pub quiet_hours: bool,
+    pub quiet_start: String,
+    pub quiet_end: String,
+}
+
+impl Default for Automations {
+    fn default() -> Self {
+        Self {
+            pause_media_for_meetings: false,
+            remind_before_events: true,
+            remind_minutes: 10,
+            quiet_hours: false,
+            quiet_start: "22:00".into(),
+            quiet_end: "07:00".into(),
+        }
+    }
+}
+
+/// Minutes since midnight for "HH:MM".
+pub fn parse_hhmm(s: &str) -> Option<u32> {
+    let (h, m) = s.trim().split_once(':')?;
+    let (h, m): (u32, u32) = (h.parse().ok()?, m.parse().ok()?);
+    (h < 24 && m < 60).then_some(h * 60 + m)
+}
+
+/// True if `now` (minutes since midnight) falls in the window, which may wrap midnight.
+pub fn in_window(now: u32, start: u32, end: u32) -> bool {
+    if start <= end {
+        now >= start && now < end
+    } else {
+        now >= start || now < end
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct UpdateSettings {
@@ -167,6 +211,7 @@ pub struct Config {
     pub bar: BarSettings,
     pub updates: UpdateSettings,
     pub appearance: Appearance,
+    pub automations: Automations,
     /// Custom icons keyed by lower-cased icon source (pinned path or running app).
     pub icon_overrides: BTreeMap<String, String>,
 }
@@ -188,6 +233,7 @@ impl Default for Config {
             bar: BarSettings::default(),
             updates: UpdateSettings::default(),
             appearance: Appearance::default(),
+            automations: Automations::default(),
             icon_overrides: BTreeMap::new(),
         }
     }
@@ -231,6 +277,15 @@ impl Config {
             self.appearance.style = Appearance::default().style;
         }
         self.appearance.spacing = self.appearance.spacing.min(24);
+        let a = &mut self.automations;
+        a.remind_minutes = a.remind_minutes.clamp(1, 120);
+        let d = Automations::default();
+        if parse_hhmm(&a.quiet_start).is_none() {
+            a.quiet_start = d.quiet_start;
+        }
+        if parse_hhmm(&a.quiet_end).is_none() {
+            a.quiet_end = d.quiet_end;
+        }
         self.pinned.retain(|p| !p.path.trim().is_empty());
         for p in &mut self.pinned {
             p.name = p.name.trim().chars().take(60).collect();
@@ -372,6 +427,23 @@ mod tests {
             .map(|e| e.kind)
             .collect();
         assert_eq!(kinds, vec!["apps", "widget:clock", "separator"]);
+    }
+
+    #[test]
+    fn quiet_hours_wrap_midnight() {
+        let (s, e) = (parse_hhmm("22:00").unwrap(), parse_hhmm("07:00").unwrap());
+        assert!(in_window(23 * 60, s, e));
+        assert!(in_window(6 * 60 + 59, s, e));
+        assert!(!in_window(12 * 60, s, e));
+        assert!(in_window(13 * 60, 12 * 60, 14 * 60));
+        assert_eq!(parse_hhmm("24:00"), None);
+        assert_eq!(parse_hhmm("7:5"), Some(7 * 60 + 5));
+        let mut c = Config::default();
+        c.automations.quiet_start = "nonsense".into();
+        c.automations.remind_minutes = 0;
+        let c = c.sanitized();
+        assert_eq!(c.automations.quiet_start, "22:00");
+        assert_eq!(c.automations.remind_minutes, 1);
     }
 
     #[test]
