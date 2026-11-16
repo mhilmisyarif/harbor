@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Repeating events, exceptions and moved occurrences are handled.
 - Automations (Settings → Automations): reminders before events, pausing music
   when a meeting starts, and quiet hours that hold Harbor's notifications.
+- Window previews: hover a running app on the dock to see live thumbnails of
+  its windows. Click one to switch to it, or ✕ to close it.
+- App groups: put pinned apps in a group (right-click → **Group**, or the group
+  field in Settings → Pinned apps) and they share one folder icon on the dock.
+  Click the folder to open its apps.
 
 ## [0.0.3] - 2026-11-17
 

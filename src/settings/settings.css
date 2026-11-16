@@ -191,3 +191,5 @@ body[data-surface="settings"] #root {
 .s-cal-input-name { width: 130px; flex-shrink: 0; }
 .s-select, .s-time { width: auto; }
 .s-input:disabled, .s-select:disabled { opacity: 0.45; }
+
+.s-group { margin-top: 4px; max-width: 180px; font-size: 12px; }

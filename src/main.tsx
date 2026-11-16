@@ -5,6 +5,7 @@ import { Bar } from "./bar/Bar";
 import { Card } from "./card/Card";
 import { Dock } from "./dock/Dock";
 import { useConfig } from "./lib/config";
+import { Preview } from "./preview/Preview";
 import { Settings } from "./settings/Settings";
 import { Widgets } from "./widgets/Widgets";
 import "./themes.css";
@@ -12,6 +13,7 @@ import "./styles.css";
 import "./widgets/widgets.css";
 import "./card/card.css";
 import "./settings/settings.css";
+import "./preview/preview.css";
 
 // One bundle serves every window; the window label picks the surface.
 const label = getCurrentWindow().label;
@@ -23,6 +25,7 @@ const surfaces: Record<string, () => JSX.Element | null> = {
   widgets: Widgets,
   settings: Settings,
   card: Card,
+  preview: Preview,
 };
 const Surface = surfaces[label] ?? Dock;
 

@@ -1,0 +1,55 @@
+/* Window previews. The window is sized from .preview, and the backend draws
+   DWM thumbnails into each .preview-thumb, so nothing here may animate or
+   transform: the measured rects must match what's on screen. */
+body[data-surface="preview"],
+body[data-surface="preview"] #root {
+  height: auto;
+  overflow: visible;
+}
+
+.preview {
+  display: inline-grid;
+  width: max-content;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--glass-border);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.preview-slot {
+  position: relative;
+  padding: 4px 6px 6px;
+  border-radius: 10px;
+}
+.preview-slot:hover { background: rgba(var(--ink), 0.1); }
+
+.preview-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+}
+.preview-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.preview-close {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  font-size: 11px;
+  opacity: 0;
+}
+.preview-slot:hover .preview-close { opacity: 0.8; }
+.preview-close:hover { background: #c42b1c; color: #fff; opacity: 1; }
+
+.preview-thumb {
+  border-radius: 6px;
+  background: rgba(var(--ink), 0.05);
+}

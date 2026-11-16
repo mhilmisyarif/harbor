@@ -2,6 +2,7 @@
 // widget (or a group of related ones), its settings, or the widget picker.
 import { FC, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { AppGroup } from "../dock/AppGroup";
 import { api, CardOpen, DockEntry } from "../lib/api";
 import { Backdrop } from "../lib/Backdrop";
 import { useConfig } from "../lib/config";
@@ -113,7 +114,11 @@ export function Card() {
   let body: JSX.Element;
   let def: WidgetDef | undefined;
 
-  if (req.kind === "picker") {
+  if (req.kind === "app-group") {
+    const name = req.entryId.replace(/^group:/, "");
+    title = name;
+    body = <AppGroup config={config} name={name} />;
+  } else if (req.kind === "picker") {
     title = "Add to dock";
     body = (
       <div className="card-picker">

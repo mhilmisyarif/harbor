@@ -139,6 +139,9 @@ function PinnedSection({ config, update }: { config: Config; update: Update }) {
   const rename = (i: number, name: string) =>
     setPinned((list) => list.map((p, k) => (k === i ? { ...p, name: name.trim() || exeName(p.path) } : p)));
   const remove = (i: number) => setPinned((list) => list.filter((_, k) => k !== i));
+  const setGroup = (i: number, group: string) =>
+    setPinned((list) => list.map((p, k) => (k === i ? { ...p, group: group.trim() || undefined } : p)));
+  const groups = [...new Set(config.pinned.map((p) => p.group).filter((g): g is string => !!g))];
 
   const changeIcon = async (p: PinnedApp) => {
     setError(null);
@@ -186,6 +189,17 @@ function PinnedSection({ config, update }: { config: Config; update: Update }) {
               <div className="s-path" title={p.path}>
                 {p.path}
               </div>
+              <input
+                key={p.group ?? ""}
+                className="s-input s-group"
+                list="pinned-groups"
+                placeholder="No group"
+                aria-label={`Group for ${p.name}`}
+                title="Apps with the same group share one folder on the dock"
+                defaultValue={p.group ?? ""}
+                onBlur={(e) => e.target.value.trim() !== (p.group ?? "") && setGroup(i, e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              />
             </div>
             <div className="s-app-actions">
               <button className="s-btn" title="Move up" disabled={i === 0} onClick={() => move(i, -1)}>
@@ -214,6 +228,11 @@ function PinnedSection({ config, update }: { config: Config; update: Update }) {
           </div>
         );
       })}
+      <datalist id="pinned-groups">
+        {groups.map((g) => (
+          <option key={g} value={g} />
+        ))}
+      </datalist>
       <div className="s-row s-row-end">
         {error && <span className="s-error">{error}</span>}
         <button className="s-btn s-primary" onClick={add}>
@@ -221,7 +240,8 @@ function PinnedSection({ config, update }: { config: Config; update: Update }) {
         </button>
       </div>
       <p className="s-hint s-pad">
-        You can also drop .exe or .lnk files onto the dock, or right-click a running app and choose Pin.
+        You can also drop .exe or .lnk files onto the dock, or right-click a running app and choose Pin. Give apps
+        the same group name to put them in one folder on the dock.
       </p>
     </Section>
   );

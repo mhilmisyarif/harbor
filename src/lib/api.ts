@@ -21,6 +21,8 @@ export interface WindowInfo {
 export interface PinnedApp {
   name: string;
   path: string;
+  /** Pinned apps sharing a group name collapse into one folder icon on the dock. */
+  group?: string;
 }
 
 export type DockPosition = "bottom" | "top";
@@ -85,6 +87,20 @@ export interface CardOpen {
   up: boolean;
 }
 
+export interface PreviewOpen {
+  ids: number[];
+  up: boolean;
+}
+
+/** A thumbnail slot in the preview window, in its CSS px. */
+export interface PreviewSlot {
+  id: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 export interface UpdateSettings {
   autoCheck: boolean;
   autoInstall: boolean;
@@ -131,6 +147,10 @@ export const api = {
     invoke<void>("open_card", { card: { kind, entryId }, rect }),
   placeCard: (width: number, height: number) => invoke<void>("place_card", { width, height }),
   closeCard: () => invoke<void>("close_card"),
+  showPreview: (ids: number[], rect: ClientRect) => invoke<void>("show_preview", { ids, rect }),
+  placePreview: (width: number, height: number, slots: PreviewSlot[]) =>
+    invoke<void>("place_preview", { width, height, slots }),
+  hidePreview: () => invoke<void>("hide_preview"),
   desktopWallpaper: (width: number, height: number) => invoke<string | null>("desktop_wallpaper", { width, height }),
 
   // System controls

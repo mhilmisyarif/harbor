@@ -1,5 +1,5 @@
 import { CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Menu } from "@tauri-apps/api/menu";
+import { Menu, SubmenuOptions } from "@tauri-apps/api/menu";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { emit, listen } from "@tauri-apps/api/event";
@@ -10,6 +10,7 @@ import { pickIcon } from "../lib/pickIcon";
 import { useWidgetConfig } from "../lib/widgetConfig";
 import { setShared } from "../widgets/kit";
 import { PanelButtonPill, PILLS } from "../widgets/pills";
+import { PREVIEW_HOVER_EVENT } from "../preview/Preview";
 import { widgetByKind } from "../widgets/registry";
 
 const RANGE = 140; // px of cursor distance over which magnification fades
@@ -23,7 +24,17 @@ interface AppItem {
   icons: string[];
   pinned: boolean;
   windows: WindowInfo[];
+  /** Set on a folder icon standing for a pinned app group. */
+  members?: AppItem[];
 }
+
+const SHOW_PREVIEW_MS = 450;
+const HIDE_PREVIEW_MS = 250;
+
+/** Group names in pinned order, without duplicates. */
+export const groupNames = (config: Config) => [
+  ...new Set(config.pinned.map((p) => p.group).filter((g): g is string => !!g)),
+];
 
 /** A running window belongs to a pinned item if either its exe or its app id matches. */
 const belongsTo = (w: WindowInfo, path: string) => samePath(w.exe, path) || samePath(w.iconSource, path);
@@ -40,7 +51,25 @@ function buildApps(config: Config, windows: WindowInfo[]): AppItem[] {
       windows: wins,
     };
   });
-  if (!config.dock.showRunning) return pinned;
+  // Apps sharing a group collapse into one folder at the first member's place.
+  const grouped: AppItem[] = [];
+  const folders = new Map<string, AppItem>();
+  config.pinned.forEach((p, i) => {
+    const item = pinned[i];
+    if (!p.group) {
+      grouped.push(item);
+      return;
+    }
+    let folder = folders.get(p.group);
+    if (!folder) {
+      folder = { key: "group:" + p.group, name: p.group, path: "", icons: [], pinned: true, windows: [], members: [] };
+      folders.set(p.group, folder);
+      grouped.push(folder);
+    }
+    folder.members!.push(item);
+    folder.windows.push(...item.windows);
+  });
+  if (!config.dock.showRunning) return grouped;
 
   const extra = new Map<string, AppItem>();
   for (const w of windows) {
@@ -57,7 +86,68 @@ function buildApps(config: Config, windows: WindowInfo[]): AppItem[] {
     item.windows.push(w);
     extra.set(k, item);
   }
-  return [...pinned, ...extra.values()];
+  return [...grouped, ...extra.values()];
+}
+
+/** A folder's icon: up to four of its apps' icons in a 2x2 grid. */
+function FolderIcon({ item, iconOf }: { item: AppItem; iconOf: (i: AppItem) => string | null }) {
+  return (
+    <span className="dock-icon dock-folder">
+      {item.members!.slice(0, 4).map((m) => {
+        const icon = iconOf(m);
+        return icon ? (
+          <img key={m.key} src={icon} alt="" draggable={false} />
+        ) : (
+          <span key={m.key} className="dock-folder-letter">
+            {m.name.slice(0, 1).toUpperCase()}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+/** Hover a running app to see its windows; the preview keeps itself open while hovered. */
+function usePreviewHover() {
+  const timer = useRef<number>();
+  const shown = useRef(false);
+  const overPreview = useRef(false);
+
+  useEffect(() => {
+    const off = listen<boolean>(PREVIEW_HOVER_EVENT, (e) => {
+      overPreview.current = e.payload;
+      if (e.payload) window.clearTimeout(timer.current);
+      else shown.current = false;
+    });
+    return () => {
+      window.clearTimeout(timer.current);
+      off.then((f) => f());
+    };
+  }, []);
+
+  const hide = () => {
+    window.clearTimeout(timer.current);
+    if (shown.current) api.hidePreview().catch(console.error);
+    shown.current = false;
+  };
+  const enter = (ids: number[], el: HTMLElement) => {
+    window.clearTimeout(timer.current);
+    if (ids.length === 0) return hide();
+    // Moving between icons while a preview is up switches it at once.
+    timer.current = window.setTimeout(
+      () => {
+        const r = el.getBoundingClientRect();
+        shown.current = true;
+        api.showPreview(ids, { x: r.left, y: r.top, width: r.width, height: r.height }).catch(console.error);
+      },
+      shown.current ? 0 : SHOW_PREVIEW_MS,
+    );
+  };
+  const leave = () => {
+    window.clearTimeout(timer.current);
+    timer.current = window.setTimeout(() => !overPreview.current && hide(), HIDE_PREVIEW_MS);
+  };
+  return { enter, leave, hide };
 }
 
 type Update = ReturnType<typeof useConfig>[1];
@@ -66,12 +156,21 @@ type Update = ReturnType<typeof useConfig>[1];
 function AppsGroup({ config, update, windows }: { config: Config; update: Update; windows: WindowInfo[] }) {
   const [mouseX, setMouseX] = useState<number | null>(null);
   const items = useMemo(() => buildApps(config, windows), [config, windows]);
-  const iconFor = useIcons(items.map((i) => i.icons));
+  const flat = useMemo(() => items.flatMap((i) => i.members ?? [i]), [items]);
+  const iconFor = useIcons(flat.map((i) => i.icons));
+  const iconOf = (item: AppItem) => config.iconOverrides[iconKey(item.path)] ?? iconFor(item.icons);
+  const preview = usePreviewHover();
   const size = config.dock.iconSize;
   const scale = config.dock.magnify ? config.dock.magnifyScale : 1;
   const slot = size + 12;
 
-  const onClick = (item: AppItem) => {
+  const onClick = (item: AppItem, el: HTMLElement) => {
+    preview.hide();
+    if (item.members) {
+      const r = el.getBoundingClientRect();
+      api.openCard("app-group", item.key, { x: r.left, y: r.top, width: r.width, height: r.height }).catch(console.error);
+      return;
+    }
     if (item.windows.length === 0) {
       api.launch(item.path).catch(console.error);
       return;
@@ -93,9 +192,43 @@ function AppsGroup({ config, update, windows }: { config: Config; update: Update
       return { ...c, iconOverrides: rest };
     });
 
+  const setGroup = (path: string, group: string | undefined) =>
+    update((c) => ({ ...c, pinned: c.pinned.map((p) => (samePath(p.path, path) ? { ...p, group } : p)) }));
+
+  const groupMenu = (item: AppItem): SubmenuOptions => {
+    const current = config.pinned.find((p) => samePath(p.path, item.path))?.group;
+    const names = groupNames(config);
+    let n = names.length + 1;
+    while (names.includes(`Group ${n}`)) n++;
+    return {
+      text: "Group",
+      items: [
+        ...names.map((g) => ({ text: (g === current ? "✓ " : "") + g, action: () => setGroup(item.path, g) })),
+        { text: "New group", action: () => setGroup(item.path, `Group ${n}`) },
+        ...(current ? [{ text: "Remove from group", action: () => setGroup(item.path, undefined) }] : []),
+      ],
+    };
+  };
+
   const onItemMenu = async (e: React.MouseEvent, item: AppItem) => {
     e.preventDefault();
     e.stopPropagation();
+    preview.hide();
+    if (item.members) {
+      const name = item.name;
+      const menu = await Menu.new({
+        items: [
+          {
+            text: "Ungroup",
+            action: () =>
+              update((c) => ({ ...c, pinned: c.pinned.map((p) => (p.group === name ? { ...p, group: undefined } : p)) })),
+          },
+          { text: "Rename in Settings…", action: () => api.openSettings() },
+        ],
+      });
+      await menu.popup();
+      return;
+    }
     const hasOverride = iconKey(item.path) in config.iconOverrides;
     const entries = [
       ...item.windows.map((w) => ({
@@ -112,6 +245,7 @@ function AppsGroup({ config, update, windows }: { config: Config; update: Update
             text: "Pin to dock",
             action: () => update((c) => ({ ...c, pinned: [...c.pinned, { name: item.name, path: item.path }] })),
           },
+      ...(item.pinned ? [groupMenu(item)] : []),
       { text: "Change icon…", action: () => setIcon(item) },
       ...(hasOverride ? [{ text: "Reset icon", action: () => resetIcon(item) }] : []),
       ...(item.windows.length
@@ -136,18 +270,22 @@ function AppsGroup({ config, update, windows }: { config: Config; update: Update
       onMouseLeave={() => setMouseX(null)}
     >
       {items.map((item, i) => {
-        const icon = config.iconOverrides[iconKey(item.path)] ?? iconFor(item.icons);
+        const icon = item.members ? null : iconOf(item);
         const focused = item.windows.some((w) => w.focused);
         return (
           <button
             key={item.key}
             className={"dock-item" + (focused ? " focused" : "")}
             style={{ "--scale": scaleAt(i) } as CSSProperties}
-            onClick={() => onClick(item)}
+            onClick={(e) => onClick(item, e.currentTarget)}
             onContextMenu={(e) => onItemMenu(e, item)}
+            onMouseEnter={(e) => !item.members && preview.enter(item.windows.map((w) => w.id), e.currentTarget)}
+            onMouseLeave={preview.leave}
           >
             <span className="dock-tip">{item.name}</span>
-            {icon ? (
+            {item.members ? (
+              <FolderIcon item={item} iconOf={iconOf} />
+            ) : icon ? (
               <img className="dock-icon" src={icon} alt="" draggable={false} />
             ) : (
               <span className="dock-icon dock-fallback">{item.name.slice(0, 1).toUpperCase()}</span>

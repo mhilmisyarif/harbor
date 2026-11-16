@@ -130,6 +130,27 @@ button.bar-item:hover { background: rgba(var(--ink), 0.1); }
   background: linear-gradient(160deg, #475569, #1e293b);
 }
 
+/* A pinned app group: its first four icons in a 2x2 grid on a tile. */
+.dock-folder {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr;
+  gap: 8%;
+  padding: 12%;
+  border-radius: 22%;
+  background: rgba(var(--ink), 0.14);
+  border: 1px solid var(--glass-border);
+}
+.dock-folder img { width: 100%; height: 100%; object-fit: contain; }
+.dock-folder-letter {
+  display: grid;
+  place-items: center;
+  border-radius: 22%;
+  font-size: calc(var(--icon, 48px) * 0.18);
+  font-weight: 700;
+  background: linear-gradient(160deg, #475569, #1e293b);
+}
+
 .dock-item:active .dock-icon { filter: brightness(0.75); }
 
 .dock-dot {
