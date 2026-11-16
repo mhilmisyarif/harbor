@@ -1,6 +1,6 @@
 [package]
 name = "harbor"
-version = "0.0.2"
+version = "0.0.3"
 description = "A dock and menu bar for Windows"
 edition = "2021"
 # slice::as_chunks
