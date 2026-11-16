@@ -63,6 +63,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Releases are built and published from a local script (`npm run release:local`)
+  instead of GitHub Actions, and CI skips docs-only changes and runs the
+  installer build only on demand, to stay within Actions minutes.
 - Dock icons are extracted at 128 px, so they stay sharp on high-DPI displays.
 - Changes made in Settings apply to the bar and dock immediately.
 

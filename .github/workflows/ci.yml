@@ -1,11 +1,16 @@
 name: CI
 
+# Keeps GitHub Actions minutes low (Windows runners bill at 2x on private repos):
+# docs-only changes skip CI, and the installer build only runs on demand.
 on:
   push:
     branches: [main]
+    paths-ignore: ["**.md", ".github/dependabot.yml", ".github/pull_request_template.md"]
   pull_request:
     # `edited` re-runs the attribution check when a PR title/description changes.
     types: [opened, synchronize, reopened, edited, labeled, unlabeled]
+    paths-ignore: ["**.md", ".github/dependabot.yml", ".github/pull_request_template.md"]
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -103,7 +108,8 @@ jobs:
   bundle:
     name: Installer build
     needs: [frontend, backend, attribution]
-    if: github.event_name == 'push'
+    # Run from the Actions tab ("Run workflow") when you want CI-built installers.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7

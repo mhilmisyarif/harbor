@@ -2,9 +2,14 @@ name: Release
 
 # Push a tag like v0.2.0 after moving [Unreleased] entries into a dated
 # "## [0.2.0] - YYYY-MM-DD" section of CHANGELOG.md and bumping the version.
+# Manual only: releases are normally made locally with `npm run release:local`
+# (no Actions minutes). Run this from the Actions tab with an existing tag.
 on:
-  push:
-    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to release, e.g. v0.0.2"
+        required: true
 
 permissions:
   contents: write
@@ -15,6 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.tag }}
           fetch-depth: 0 # full history for the attribution check
       - uses: actions/setup-node@v7
         with:
@@ -33,7 +39,7 @@ jobs:
           fi
 
       - name: Check tag, versions and changelog
-        run: node scripts/release-check.mjs --tag "${{ github.ref_name }}"
+        run: node scripts/release-check.mjs --tag "${{ inputs.tag }}"
 
       - name: No AI attribution in files or history
         run: node scripts/attribution-check.mjs
@@ -41,8 +47,10 @@ jobs:
       - name: Release notes from CHANGELOG.md
         id: notes
         shell: bash
+        env:
+          TAG: ${{ inputs.tag }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="${TAG#v}"
           {
             echo "body<<__NOTES__"
             node scripts/release-check.mjs --notes "$version"
@@ -69,8 +77,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: Harbor ${{ github.ref_name }}
+          tagName: ${{ inputs.tag }}
+          releaseName: Harbor ${{ inputs.tag }}
           releaseBody: ${{ steps.notes.outputs.body }}
           releaseDraft: true
-          prerelease: ${{ contains(github.ref_name, '-') }}
+          prerelease: ${{ contains(inputs.tag, '-') }}

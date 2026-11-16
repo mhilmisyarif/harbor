@@ -69,14 +69,18 @@ Every change is verified on both the frontend and the backend. User-visible chan
 get a `CHANGELOG.md` entry ([Keep a Changelog](https://keepachangelog.com/en/1.1.0/)).
 See [CLAUDE.md](CLAUDE.md) for the full rules and the release process.
 
-## CI/CD
+## Releases and CI/CD
 
-- **CI** (`.github/workflows/ci.yml`) runs on every PR and push to `main`:
-  - frontend typecheck and build;
-  - backend fmt, clippy and tests on Windows;
-  - a no-AI-attribution scan of files, commits and PR text (also a local `commit-msg` hook);
-  - a changelog-entry check on PRs;
-  - on `main` pushes, an installer build uploaded as an artifact.
-- **Release** (`.github/workflows/release.yml`) runs when you push a `vX.Y.Z` tag. It re-runs all
-  checks, builds the MSI and NSIS installers, and drafts a GitHub release with that
-  version's changelog section as the notes.
+- **Releases** are built on this machine, so they use no GitHub Actions minutes:
+  ```
+  npm run release:local -- --dry-run   # build and verify only
+  npm run release:local -- --publish   # tag, push and publish (installed copies update)
+  ```
+  The script runs every check, builds signed installers, writes the updater's `latest.json`, and
+  uploads everything to a GitHub Release.
+- **In-app updates:** Harbor checks for new releases and installs them from **Settings → Updates**.
+- **CI** (`.github/workflows/ci.yml`) runs on PRs and pushes to `main`, except docs-only changes:
+  - frontend checks, backend checks, the no-AI-attribution scan and the changelog check;
+  - the installer build, only when started manually.
+- **Release workflow** (`.github/workflows/release.yml`) is the CI alternative to `release:local`.
+  It's manual-only.

@@ -66,10 +66,12 @@ TypeScript `strict` with no unused locals or parameters.
 2. Update the link references at the bottom.
 3. Bump the version in `package.json`, `src-tauri/tauri.conf.json` and `src-tauri/Cargo.toml`
    (they must match; `check:release` enforces it), then refresh `Cargo.lock` with `cargo check`.
-4. Run the full check, commit, then tag `vX.Y.Z` and push the tag. The Release workflow
-   verifies everything again, builds MSI/NSIS installers and drafts a GitHub release whose
-   body is that changelog section.
-5. **Publish the draft.** Installed copies update from
+4. Commit, then run `npm run release:local` (add `-- --publish` to publish right away, or
+   `-- --dry-run` to test). It runs every check, builds signed MSI/NSIS installers, writes
+   `latest.json`, tags and pushes `vX.Y.Z`, and creates the GitHub release with the
+   changelog section as notes. It uses no GitHub Actions minutes. The Release workflow
+   does the same in CI, but only when started manually from the Actions tab.
+5. **Publish the release** (if you made a draft). Installed copies update from
    `releases/latest/download/latest.json`, which only resolves to a *published*,
    non-prerelease release that anonymous users can read.
 
@@ -98,15 +100,15 @@ TypeScript `strict` with no unused locals or parameters.
 
 ## 4. CI/CD
 
-- `.github/workflows/ci.yml` runs on every PR and push to `main`:
+- `.github/workflows/ci.yml` runs on every PR and push to `main` (docs-only changes skip it):
   - frontend checks (Ubuntu);
   - backend checks (Windows);
   - a no-AI-attribution scan;
   - a changelog-entry requirement on PRs (the `skip-changelog` label opts out);
-  - on `main` pushes only, a full installer build uploaded as an artifact.
-- `.github/workflows/release.yml` runs on `v*.*.*` tags and produces a **draft** release. Publish it
-  manually after reviewing.
-- Dependabot opens weekly update PRs for npm, Cargo and Actions.
+  - an installer build, only when started manually ("Run workflow"), to save minutes.
+- `.github/workflows/release.yml` is manual-only. Releases are normally cut locally with
+  `npm run release:local`.
+- Dependabot opens monthly update PRs for npm, Cargo and Actions.
 
 ## 5. Local build environment (this machine)
 
