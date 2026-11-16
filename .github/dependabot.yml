@@ -1,16 +1,24 @@
 version: 2
+# Dependency bumps need no CHANGELOG entry, so every Dependabot PR is labelled
+# skip-changelog. CI still runs the full frontend + backend checks on them.
 updates:
   - package-ecosystem: npm
     directory: /
     schedule:
       interval: weekly
+    labels: [dependencies, skip-changelog]
     groups:
       tauri-js:
         patterns: ["@tauri-apps/*"]
+    # Majors (TypeScript, Vite, React) need deliberate migration; do them by hand.
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: cargo
     directory: /src-tauri
     schedule:
       interval: weekly
+    labels: [dependencies, skip-changelog]
     groups:
       tauri-rs:
         patterns: ["tauri", "tauri-*"]
@@ -18,3 +26,4 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    labels: [dependencies, skip-changelog]
