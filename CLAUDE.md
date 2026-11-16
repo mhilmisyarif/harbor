@@ -18,9 +18,10 @@ Run all of these, in this order, and read the output:
 npm run check:frontend   # tsc --noEmit + vite build
 npm run check:backend    # cargo fmt --check + clippy -D warnings + cargo test
 npm run check:release    # versions agree, CHANGELOG.md is well-formed
+npm run check:attribution  # no AI attribution in files or commit messages
 ```
 
-(`npm run check` runs all three.)
+(`npm run check` runs all four.)
 
 Then cross-check the contract by hand whenever a command is added, renamed or changed:
 
@@ -70,6 +71,13 @@ TypeScript `strict` with no unused locals or parameters.
 
 - **No AI attribution anywhere**: no `Co-Authored-By` trailers for an AI, no
   "Generated with ..." lines, in commits, PR descriptions, code comments or docs.
+  This is enforced in three places by `scripts/attribution-check.mjs`:
+  - the `commit-msg` hook in `.githooks/` (installed by `npm install`) rejects the commit;
+  - `npm run check:attribution` (part of `npm run check`) scans tracked files and history;
+  - the CI `No AI attribution` job scans files, the PR's commits, and the PR title and description.
+
+  The release workflow re-checks everything before building. This file and the script are the only
+  files exempt, because they must name the patterns.
 - Imperative, concise commit subjects (`Add currency widget`, `Fix dock icon cache`).
 - Fill in `.github/pull_request_template.md`.
 
@@ -78,6 +86,7 @@ TypeScript `strict` with no unused locals or parameters.
 - `.github/workflows/ci.yml` runs on every PR and push to `main`:
   - frontend checks (Ubuntu);
   - backend checks (Windows);
+  - a no-AI-attribution scan;
   - a changelog-entry requirement on PRs (the `skip-changelog` label opts out);
   - on `main` pushes only, a full installer build uploaded as an artifact.
 - `.github/workflows/release.yml` runs on `v*.*.*` tags and produces a **draft** release. Publish it

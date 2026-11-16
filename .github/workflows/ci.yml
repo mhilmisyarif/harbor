@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+    # `edited` re-runs the attribution check when a PR title/description changes.
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -46,6 +48,36 @@ jobs:
           workspaces: src-tauri
       - run: npm run check:backend
 
+  attribution:
+    name: No AI attribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Tracked files
+        run: node scripts/attribution-check.mjs --files
+      - name: Commit messages in this PR
+        if: github.event_name == 'pull_request'
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: node scripts/attribution-check.mjs --commits "$BASE..$HEAD"
+      - name: Commit messages on the branch
+        if: github.event_name == 'push'
+        run: node scripts/attribution-check.mjs --commits HEAD
+      - name: PR title and description
+        if: github.event_name == 'pull_request'
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          printf '%s\n\n%s\n' "$PR_TITLE" "$PR_BODY" > "$RUNNER_TEMP/pr.txt"
+          node scripts/attribution-check.mjs --text-file "$RUNNER_TEMP/pr.txt"
+
   changelog:
     name: Changelog updated
     if: github.event_name == 'pull_request'
@@ -70,7 +102,7 @@ jobs:
 
   bundle:
     name: Installer build
-    needs: [frontend, backend]
+    needs: [frontend, backend, attribution]
     if: github.event_name == 'push'
     runs-on: windows-latest
     steps:

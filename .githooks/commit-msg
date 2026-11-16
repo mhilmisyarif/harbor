@@ -1,0 +1,3 @@
+#!/bin/sh
+# Rejects commit messages that carry AI attribution. Installed by `npm install`.
+exec node scripts/attribution-check.mjs --message-file "$1"

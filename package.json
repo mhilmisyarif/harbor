@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "tauri": "tauri",
     "icons": "tauri icon app-icon.svg",
-    "check": "npm run check:frontend && npm run check:backend && npm run check:release",
+    "prepare": "node scripts/install-hooks.mjs",
+    "check": "npm run check:frontend && npm run check:backend && npm run check:release && npm run check:attribution",
+    "check:attribution": "node scripts/attribution-check.mjs",
     "check:frontend": "tsc --noEmit && vite build",
     "check:backend": "cargo fmt --manifest-path src-tauri/Cargo.toml --check && cargo clippy --manifest-path src-tauri/Cargo.toml --all-targets --locked -- -D warnings && cargo test --manifest-path src-tauri/Cargo.toml --locked",
     "check:release": "node scripts/release-check.mjs"

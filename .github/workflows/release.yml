@@ -14,6 +14,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history for the attribution check
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -22,6 +24,9 @@ jobs:
 
       - name: Check tag, versions and changelog
         run: node scripts/release-check.mjs --tag "${{ github.ref_name }}"
+
+      - name: No AI attribution in files or history
+        run: node scripts/attribution-check.mjs
 
       - name: Release notes from CHANGELOG.md
         id: notes

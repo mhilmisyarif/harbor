@@ -44,7 +44,8 @@ src/                     React + TS frontend (one bundle; window label picks the
   bar/ dock/ widgets/    one folder per window
   lib/api.ts             typed wrappers for every Rust command
 src-tauri/src/commands/  appbar, layout, windows_list, icons, apps, audio, stats, widgets
-scripts/release-check.mjs  version + CHANGELOG consistency (local and CI)
+scripts/release-check.mjs      version + CHANGELOG consistency (local and CI)
+scripts/attribution-check.mjs  rejects AI attribution (hook, local and CI)
 ```
 
 ## Development
@@ -67,6 +68,7 @@ See [CLAUDE.md](CLAUDE.md) for the full rules and the release process.
 - **CI** (`.github/workflows/ci.yml`) runs on every PR and push to `main`:
   - frontend typecheck and build;
   - backend fmt, clippy and tests on Windows;
+  - a no-AI-attribution scan of files, commits and PR text (also a local `commit-msg` hook);
   - a changelog-entry check on PRs;
   - on `main` pushes, an installer build uploaded as an artifact.
 - **Release** (`.github/workflows/release.yml`) runs when you push a `vX.Y.Z` tag. It re-runs all

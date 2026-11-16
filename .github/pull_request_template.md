@@ -7,6 +7,8 @@
 - [ ] Ran the app (`npm run tauri dev`) and exercised the changed behaviour
 - [ ] If an `invoke` command or its payload changed: Rust signature, `src/lib/api.ts` types and every caller updated together
 
+- [ ] No AI attribution in commits, this description or the code (`npm run check:attribution`)
+
 ## Changelog
 
 - [ ] Entry added under `## [Unreleased]` in `CHANGELOG.md` (or this PR is labelled `skip-changelog`)
