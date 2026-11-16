@@ -4,6 +4,7 @@ import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { BarSettings, Config, DockSettings, exeName, PinnedApp, samePath } from "../lib/api";
 import { iconKey, useConfig, useIcons } from "../lib/config";
 import { pickApp, pickIcon } from "../lib/pickIcon";
+import { DockLayoutSection } from "./DockLayout";
 
 type Update = (change: (c: Config) => Config) => void;
 
@@ -81,7 +82,7 @@ function Slider(props: {
 function DockSection({ dock, update }: { dock: DockSettings; update: Update }) {
   const set = (patch: Partial<DockSettings>) => update((c) => ({ ...c, dock: { ...c.dock, ...patch } }));
   return (
-    <Section title="Dock">
+    <Section title="Dock icons">
       <Row label="Icon size">
         <Slider
           label="Icon size"
@@ -283,6 +284,7 @@ export function Settings() {
   return (
     <main className="s-page">
       <h1>Settings</h1>
+      <DockLayoutSection config={config} update={update} Row={Row} Toggle={Toggle} />
       <DockSection dock={config.dock} update={update} />
       <PinnedSection config={config} update={update} />
       <BarSection bar={config.bar} update={update} />

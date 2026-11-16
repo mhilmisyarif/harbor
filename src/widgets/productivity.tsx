@@ -1,101 +1,29 @@
 // Pomodoro, timer, stopwatch, todos, notes, calendar and currency.
 import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api";
-import { fmtDuration, fmtPrice, notify, Ring, Tile, useNow, useShared, WidgetProps } from "./kit";
-
-/**
- * Timers must keep counting while the panel is hidden and survive re-renders,
- * so they store an end timestamp and derive the remaining time from the clock.
- */
-function useTicker(active: boolean) {
-  const [, force] = useState(0);
-  useEffect(() => {
-    if (!active) return;
-    const id = setInterval(() => force((n) => n + 1), 250);
-    return () => clearInterval(id);
-  }, [active]);
-}
+import { fmtPrice, Ring, Tile, useNow, useShared, WidgetProps } from "./kit";
+import { fmtStopwatch, PHASE_LABEL, PomodoroSettings, useCountdown, usePomodoro, useStopwatch } from "./timers";
 
 // ---------- Pomodoro ----------
 
-export interface PomodoroSettings {
-  focus: number;
-  shortBreak: number;
-  longBreak: number;
-  rounds: number;
-}
-
-type Phase = "focus" | "short" | "long";
-const PHASE_LABEL: Record<Phase, string> = { focus: "Focus", short: "Short break", long: "Long break" };
+export type { PomodoroSettings } from "./timers";
 
 export function Pomodoro({ settings }: WidgetProps<PomodoroSettings>) {
-  const minutes = (p: Phase) => (p === "focus" ? settings.focus : p === "short" ? settings.shortBreak : settings.longBreak);
-  const [phase, setPhase] = useState<Phase>("focus");
-  const [round, setRound] = useState(1);
-  const [endAt, setEndAt] = useState<number | null>(null); // running when set
-  const [leftMs, setLeftMs] = useState(settings.focus * 60_000); // when paused
-  useTicker(endAt !== null);
-
-  const total = minutes(phase) * 60_000;
-  const remaining = endAt !== null ? Math.max(0, endAt - Date.now()) : leftMs;
-
-  const advance = (fromTimer: boolean) => {
-    let next: Phase;
-    let nextRound = round;
-    if (phase === "focus") {
-      next = round >= settings.rounds ? "long" : "short";
-    } else {
-      next = "focus";
-      nextRound = phase === "long" ? 1 : round + 1;
-    }
-    if (fromTimer) notify(`${PHASE_LABEL[phase]} finished`, `Time for: ${PHASE_LABEL[next].toLowerCase()}.`);
-    setPhase(next);
-    setRound(nextRound);
-    const ms = minutes(next) * 60_000;
-    setLeftMs(ms);
-    setEndAt(fromTimer ? Date.now() + ms : null); // keep the cycle running after a phase ends
-  };
-
-  useEffect(() => {
-    if (endAt !== null && remaining <= 0) advance(true);
-  }); // checks on every tick
-
-  // Reset the idle timer when the durations change.
-  useEffect(() => {
-    if (endAt === null) setLeftMs(minutes(phase) * 60_000);
-  }, [settings.focus, settings.shortBreak, settings.longBreak]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const toggle = () => {
-    if (endAt !== null) {
-      setLeftMs(remaining);
-      setEndAt(null);
-    } else {
-      setEndAt(Date.now() + remaining);
-    }
-  };
-
+  const p = usePomodoro(settings);
   return (
-    <Tile title={`${PHASE_LABEL[phase]} · ${round}/${settings.rounds}`}>
+    <Tile title={`${PHASE_LABEL[p.phase]} · ${p.round}/${settings.rounds}`}>
       <div className="w-row">
-        <Ring value={1 - remaining / total} color={phase === "focus" ? "#f87171" : "#4ade80"}>
-          <b>{fmtDuration(remaining / 1000)}</b>
+        <Ring value={1 - p.remaining / p.total} color={p.phase === "focus" ? "#f87171" : "#4ade80"}>
+          <b>{p.label}</b>
         </Ring>
         <div className="w-col">
-          <button className="w-btn w-primary" onClick={toggle}>
-            {endAt !== null ? "Pause" : remaining < total ? "Resume" : "Start"}
+          <button className="w-btn w-primary" onClick={p.toggle}>
+            {p.running ? "Pause" : p.remaining < p.total ? "Resume" : "Start"}
           </button>
-          <button className="w-btn" onClick={() => advance(false)}>
+          <button className="w-btn" onClick={p.skip}>
             Skip
           </button>
-          <button
-            className="w-btn"
-            onClick={() => {
-              setPhase("focus");
-              setRound(1);
-              setEndAt(null);
-              setLeftMs(settings.focus * 60_000);
-            }}
-          >
+          <button className="w-btn" onClick={p.reset}>
             Reset
           </button>
         </div>
@@ -130,58 +58,29 @@ export function PomodoroForm({ settings, setSettings }: WidgetProps<PomodoroSett
 
 // ---------- Timer ----------
 
-const PRESETS = [1, 5, 10, 15, 25, 45];
+export const TIMER_PRESETS = [1, 5, 10, 15, 25, 45];
 
 export function Timer() {
-  const [duration, setDuration] = useState(5 * 60_000);
-  const [endAt, setEndAt] = useState<number | null>(null);
-  const [leftMs, setLeftMs] = useState(duration);
+  const t = useCountdown();
   const [custom, setCustom] = useState("");
-  useTicker(endAt !== null);
-  const remaining = endAt !== null ? Math.max(0, endAt - Date.now()) : leftMs;
-
-  useEffect(() => {
-    if (endAt !== null && remaining <= 0) {
-      setEndAt(null);
-      setLeftMs(duration);
-      notify("Timer finished", `${fmtDuration(duration / 1000)} is up.`);
-    }
-  });
-
-  const start = (ms: number) => {
-    setDuration(ms);
-    setLeftMs(ms);
-    setEndAt(Date.now() + ms);
-  };
-
   return (
     <Tile title="Timer">
       <div className="w-row">
-        <Ring value={endAt !== null || remaining < duration ? 1 - remaining / duration : 0}>
-          <b>{fmtDuration(remaining / 1000)}</b>
+        <Ring value={t.running || t.paused ? 1 - t.remaining / t.duration : 0}>
+          <b>{t.label}</b>
         </Ring>
         <div className="w-col">
-          {endAt !== null ? (
-            <button className="w-btn w-primary" onClick={() => (setLeftMs(remaining), setEndAt(null))}>
-              Pause
-            </button>
-          ) : remaining < duration ? (
-            <button className="w-btn w-primary" onClick={() => setEndAt(Date.now() + remaining)}>
-              Resume
-            </button>
-          ) : (
-            <button className="w-btn w-primary" onClick={() => start(duration)}>
-              Start
-            </button>
-          )}
-          <button className="w-btn" onClick={() => (setEndAt(null), setLeftMs(duration))}>
+          <button className="w-btn w-primary" onClick={() => (t.running || t.paused ? t.toggle() : t.start(t.duration))}>
+            {t.running ? "Pause" : t.paused ? "Resume" : "Start"}
+          </button>
+          <button className="w-btn" onClick={t.reset}>
             Reset
           </button>
         </div>
       </div>
       <div className="w-chips">
-        {PRESETS.map((m) => (
-          <button key={m} className="w-chip" onClick={() => start(m * 60_000)}>
+        {TIMER_PRESETS.map((m) => (
+          <button key={m} className="w-chip" onClick={() => t.start(m * 60_000)}>
             {m}m
           </button>
         ))}
@@ -192,7 +91,7 @@ export function Timer() {
           onChange={(e) => setCustom(e.target.value.replace(/[^\d.]/g, ""))}
           onKeyDown={(e) => {
             const m = Number(custom);
-            if (e.key === "Enter" && m > 0 && m <= 24 * 60) start(m * 60_000);
+            if (e.key === "Enter" && m > 0 && m <= 24 * 60) t.start(m * 60_000);
           }}
         />
       </div>
@@ -203,40 +102,28 @@ export function Timer() {
 // ---------- Stopwatch ----------
 
 export function Stopwatch() {
-  const [startedAt, setStartedAt] = useState<number | null>(null);
-  const [banked, setBanked] = useState(0);
-  const [laps, setLaps] = useState<number[]>([]);
-  useTicker(startedAt !== null);
-  const elapsed = banked + (startedAt !== null ? Date.now() - startedAt : 0);
-  const fmt = (ms: number) => `${fmtDuration(Math.floor(ms / 1000))}.${String(Math.floor((ms % 1000) / 100))}`;
-
+  const s = useStopwatch();
   return (
     <Tile title="Stopwatch">
-      <div className="w-clock-big w-center-text">{fmt(elapsed)}</div>
+      <div className="w-clock-big w-center-text">{fmtStopwatch(s.elapsed)}</div>
       <div className="w-row w-gap">
-        {startedAt !== null ? (
-          <button className="w-btn w-primary" onClick={() => (setBanked(elapsed), setStartedAt(null))}>
-            Pause
-          </button>
-        ) : (
-          <button className="w-btn w-primary" onClick={() => setStartedAt(Date.now())}>
-            {elapsed ? "Resume" : "Start"}
-          </button>
-        )}
-        <button className="w-btn" disabled={!elapsed} onClick={() => setLaps((l) => [elapsed, ...l].slice(0, 20))}>
+        <button className="w-btn w-primary" onClick={s.toggle}>
+          {s.running ? "Pause" : s.elapsed ? "Resume" : "Start"}
+        </button>
+        <button className="w-btn" disabled={!s.elapsed} onClick={s.lap}>
           Lap
         </button>
-        <button className="w-btn" onClick={() => (setStartedAt(null), setBanked(0), setLaps([]))}>
+        <button className="w-btn" onClick={s.reset}>
           Reset
         </button>
       </div>
-      {laps.length > 0 && (
+      {s.laps.length > 0 && (
         <div className="w-laps">
-          {laps.map((t, i) => (
+          {s.laps.map((t, i) => (
             <div key={i} className="w-row w-small">
-              <span className="w-muted">Lap {laps.length - i}</span>
-              <span>{fmt(t - (laps[i + 1] ?? 0))}</span>
-              <span className="w-muted">{fmt(t)}</span>
+              <span className="w-muted">Lap {s.laps.length - i}</span>
+              <span>{fmtStopwatch(t - (s.laps[i + 1] ?? 0))}</span>
+              <span className="w-muted">{fmtStopwatch(t)}</span>
             </div>
           ))}
         </div>
@@ -244,7 +131,6 @@ export function Stopwatch() {
     </Tile>
   );
 }
-
 // ---------- Todos & Notes (user content lives in widget-data files) ----------
 
 function usePersisted<T>(key: string, initial: T) {

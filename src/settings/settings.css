@@ -147,3 +147,24 @@ body[data-surface="settings"] #root {
   font-size: 12px;
   margin: 0 2px;
 }
+
+/* dock layout */
+.s-segmented { display: inline-flex; padding: 2px; border-radius: 8px; background: rgba(255, 255, 255, 0.07); }
+.s-segmented button { padding: 4px 12px; border-radius: 6px; font-size: 12px; color: var(--muted); }
+.s-segmented button.on { background: var(--accent); color: #0b1220; font-weight: 600; }
+.s-presets { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 14px 12px; }
+.s-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.s-preset:hover { border-color: var(--accent); }
+.s-dock-item + .s-dock-item, .s-dock-item + .s-row { border-top: 1px solid rgba(255, 255, 255, 0.06); }
+.s-wrap { flex-wrap: wrap; gap: 6px; }
+.s-gallery { padding-top: 12px; max-height: 520px; overflow-y: auto; }

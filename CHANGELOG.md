@@ -42,6 +42,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Apps & files: Recycle Bin, search (web search or open a typed folder path),
     screenshot, and LeetCode stats from a public profile.
 - Several widgets showing the same data share one request.
+- The dock is now a customizable strip. Mix your apps with widget pills,
+  separators, flexible space and a widgets button, in any order.
+- About 40 widgets have a compact dock pill, including clocks, Pomodoro, timer,
+  stopwatch, weather and forecast, now playing, volume, CPU and RAM,
+  network, battery, todos, currency, crypto, stocks, theme, keyboard layout,
+  search, Recycle Bin, screenshot and LeetCode.
+- Dock position (bottom or top) and style (floating or full width). A
+  full-width dock can reserve screen space like the taskbar.
+- Option to hide the Windows taskbar while Harbor runs. It is restored when you
+  quit, when you turn the option off, and on the next launch if Harbor was
+  closed unexpectedly.
+- Option to turn off the top menu bar.
+- Dock presets: Floating dock, Taskbar replacement, Widget dock and Top strip.
 
 ### Changed
 

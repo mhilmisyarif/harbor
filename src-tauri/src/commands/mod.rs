@@ -10,6 +10,7 @@ pub mod layout;
 pub mod media;
 pub mod stats;
 pub mod system_extra;
+pub mod taskbar;
 pub mod widgets;
 pub mod windows_list;
 

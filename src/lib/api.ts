@@ -23,14 +23,39 @@ export interface PinnedApp {
   path: string;
 }
 
+export type DockPosition = "bottom" | "top";
+export type DockStyle = "floating" | "full";
+
+/** One slot in the dock strip. `kind` is `apps`, `separator`, `spacer` or `widget:<kind>`. */
+export interface DockEntry {
+  id: string;
+  kind: string;
+  settings: Record<string, unknown>;
+}
+
 export interface DockSettings {
   iconSize: number;
   magnify: boolean;
   magnifyScale: number;
   showRunning: boolean;
+  position: DockPosition;
+  style: DockStyle;
+  reserveSpace: boolean;
+  hideTaskbar: boolean;
+  items: DockEntry[];
+}
+
+export interface DockGeometry {
+  width: number;
+  height: number;
+  strip: number;
+  position: DockPosition;
+  style: DockStyle;
+  reserveSpace: boolean;
 }
 
 export interface BarSettings {
+  enabled: boolean;
   showCpu: boolean;
   showRam: boolean;
   showBattery: boolean;
@@ -71,7 +96,9 @@ export const api = {
   volume: () => invoke<Volume>("get_volume"),
   setVolume: (level: number) => invoke<Volume>("set_volume", { level }),
   toggleMute: () => invoke<Volume>("toggle_mute"),
-  layoutDock: (width: number, height: number) => invoke<void>("layout_dock", { width, height }),
+  layoutDock: (geometry: DockGeometry) => invoke<void>("layout_dock", { geometry }),
+  setBarEnabled: (enabled: boolean) => invoke<void>("set_bar_enabled", { enabled }),
+  setTaskbarHidden: (hidden: boolean) => invoke<void>("set_taskbar_hidden", { hidden }),
   toggleWidgets: () => invoke<void>("toggle_widgets"),
 
   // Widgets

@@ -1,6 +1,8 @@
 mod commands;
 
-use commands::{apps, audio, icons, layout, media, stats, system_extra, widgets, windows_list};
+use commands::{
+    apps, audio, icons, layout, media, stats, system_extra, taskbar, widgets, windows_list,
+};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -39,7 +41,8 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
                 let _ = layout::show_settings(app);
             }
             "quit" => {
-                layout::release_bar();
+                layout::release_all();
+                taskbar::restore();
                 app.exit(0);
             }
             _ => {}
@@ -85,8 +88,17 @@ pub fn run() {
             app.global_shortcut()
                 .register(Shortcut::new(Some(Modifiers::ALT), Code::KeyD))?;
             create_tray(handle)?;
-            layout::place_bar(handle)?;
-            layout::place_dock(handle, 480.0, layout::DOCK_HEIGHT, true)?;
+
+            // Safety net: if a previous run was killed with the taskbar hidden, bring it back.
+            taskbar::restore();
+            let config = apps::load_config(handle.clone()).unwrap_or_default();
+            if config.dock.hide_taskbar {
+                let _ = taskbar::set_taskbar_hidden(true);
+            }
+            if config.bar.enabled {
+                layout::place_bar(handle)?;
+            }
+            layout::place_dock(handle, layout::DockGeometry::initial(), true)?;
             Ok(())
         })
         .on_window_event(|window, event| match event {
@@ -132,6 +144,8 @@ pub fn run() {
             layout::layout_dock,
             layout::toggle_widgets,
             layout::open_settings,
+            layout::set_bar_enabled,
+            taskbar::set_taskbar_hidden,
             widgets::weather,
             widgets::geocode,
             widgets::locate_by_ip,
@@ -146,6 +160,13 @@ pub fn run() {
             widgets::crypto_chart,
             widgets::leetcode,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Harbor");
+        .build(tauri::generate_context!())
+        .expect("error while building Harbor")
+        .run(|_app, event| {
+            // Covers every exit path that still runs code (tray Quit, session end).
+            if let tauri::RunEvent::Exit = event {
+                layout::release_all();
+                taskbar::restore();
+            }
+        });
 }

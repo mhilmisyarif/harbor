@@ -28,6 +28,32 @@ pub struct PinnedApp {
     pub path: String,
 }
 
+/// One slot in the dock strip: the app icons, a widget pill, or a divider.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct DockEntry {
+    pub id: String,
+    /// `apps`, `separator`, `spacer`, `panel` (widget panel button), or `widget:<kind>`.
+    pub kind: String,
+    #[serde(default)]
+    pub settings: serde_json::Value,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DockPosition {
+    Bottom,
+    Top,
+}
+
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum DockStyle {
+    /// Centered, sized to its contents.
+    Floating,
+    /// Edge to edge, like a taskbar.
+    Full,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct DockSettings {
@@ -35,6 +61,13 @@ pub struct DockSettings {
     pub magnify: bool,
     pub magnify_scale: f32,
     pub show_running: bool,
+    pub position: DockPosition,
+    pub style: DockStyle,
+    /// Full style only: reserve the strip so maximized windows stop at it.
+    pub reserve_space: bool,
+    /// Hide the Windows taskbar while Harbor runs (restored on quit).
+    pub hide_taskbar: bool,
+    pub items: Vec<DockEntry>,
 }
 
 impl Default for DockSettings {
@@ -44,13 +77,26 @@ impl Default for DockSettings {
             magnify: true,
             magnify_scale: 1.5,
             show_running: true,
+            position: DockPosition::Bottom,
+            style: DockStyle::Floating,
+            reserve_space: true,
+            hide_taskbar: false,
+            items: vec![DockEntry {
+                id: "apps".into(),
+                kind: "apps".into(),
+                settings: serde_json::json!({}),
+            }],
         }
     }
 }
 
+const MAX_DOCK_ITEMS: usize = 40;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct BarSettings {
+    /// The top menu bar can be turned off entirely (e.g. when the dock is at the top).
+    pub enabled: bool,
     pub show_cpu: bool,
     pub show_ram: bool,
     pub show_battery: bool,
@@ -63,6 +109,7 @@ pub struct BarSettings {
 impl Default for BarSettings {
     fn default() -> Self {
         Self {
+            enabled: true,
             show_cpu: true,
             show_ram: true,
             show_battery: true,
@@ -112,6 +159,32 @@ impl Config {
             self.dock.magnify_scale = DockSettings::default().magnify_scale;
         }
         self.dock.magnify_scale = self.dock.magnify_scale.clamp(1.0, 2.0);
+        let mut seen = std::collections::HashSet::new();
+        self.dock.items.retain(|e| {
+            let ok_kind = e.kind == "apps"
+                || e.kind == "separator"
+                || e.kind == "spacer"
+                || e.kind == "panel"
+                || e.kind.strip_prefix("widget:").is_some_and(|k| {
+                    !k.is_empty()
+                        && k.len() <= 40
+                        && k.chars()
+                            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+                });
+            let ok_size = e.settings.to_string().len() <= 16 * 1024;
+            ok_kind && ok_size && !e.id.is_empty() && e.id.len() <= 40 && seen.insert(e.id.clone())
+        });
+        // At most one app group.
+        let mut apps_seen = false;
+        self.dock
+            .items
+            .retain(|e| e.kind != "apps" || !std::mem::replace(&mut apps_seen, true));
+        for e in &mut self.dock.items {
+            if !e.settings.is_object() {
+                e.settings = serde_json::json!({});
+            }
+        }
+        self.dock.items.truncate(MAX_DOCK_ITEMS);
         self.pinned.retain(|p| !p.path.trim().is_empty());
         for p in &mut self.pinned {
             p.name = p.name.trim().chars().take(60).collect();
@@ -221,6 +294,43 @@ mod tests {
             c.icon_overrides.keys().collect::<Vec<_>>(),
             vec!["c:\\a.exe"]
         );
+    }
+
+    #[test]
+    fn dock_items_are_validated() {
+        let mut c = Config::default();
+        let w = |id: &str, kind: &str| DockEntry {
+            id: id.into(),
+            kind: kind.into(),
+            settings: serde_json::json!({}),
+        };
+        c.dock.items = vec![
+            w("apps", "apps"),
+            w("a2", "apps"), // second app group
+            w("c", "widget:clock"),
+            w("c", "widget:flip-clock"), // duplicate id
+            w("x", "widget:../../evil"), // bad kind
+            w("s", "separator"),
+            w("y", "launch-missiles"), // unknown kind
+        ];
+        let kinds: Vec<_> = c
+            .sanitized()
+            .dock
+            .items
+            .into_iter()
+            .map(|e| e.kind)
+            .collect();
+        assert_eq!(kinds, vec!["apps", "widget:clock", "separator"]);
+    }
+
+    #[test]
+    fn dock_position_and_style_round_trip() {
+        let v = serde_json::to_value(DockSettings::default()).unwrap();
+        assert_eq!(v["position"], "bottom");
+        assert_eq!(v["style"], "floating");
+        let d: DockSettings = serde_json::from_str(r#"{"position":"top","style":"full"}"#).unwrap();
+        assert_eq!((d.position, d.style), (DockPosition::Top, DockStyle::Full));
+        assert_eq!(d.items.len(), 1, "missing items fall back to the app group");
     }
 
     #[test]

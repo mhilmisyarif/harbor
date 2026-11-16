@@ -1,45 +1,28 @@
 // The widget panel: renders the saved layout, and in edit mode lets you add
 // widgets from the gallery, reorder, configure and remove them.
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
-import { api, WIDGET_CONFIG_EVENT, WidgetConfig, WidgetInstance } from "../lib/api";
+import { useMemo, useState } from "react";
+import { api, WidgetInstance } from "../lib/api";
+import { useWidgetConfig } from "../lib/widgetConfig";
 import { CATEGORIES, widgetByKind, WIDGETS, WidgetDef } from "./registry";
-
-function useWidgetConfig() {
-  const [config, setState] = useState<WidgetConfig | null>(null);
-  const latest = useRef<WidgetConfig | null>(null);
-  const set = (c: WidgetConfig) => {
-    latest.current = c;
-    setState(c);
-  };
-  useEffect(() => {
-    api.loadWidgetConfig().then(set);
-    const off = listen<WidgetConfig>(WIDGET_CONFIG_EVENT, (e) => set(e.payload));
-    return () => {
-      off.then((f) => f());
-    };
-  }, []);
-  const update = useCallback((change: (c: WidgetConfig) => WidgetConfig) => {
-    if (!latest.current) return;
-    const next = change(latest.current);
-    set(next);
-    api.saveWidgetConfig(next).catch(console.error);
-  }, []);
-  return [config, update] as const;
-}
 
 const newId = () => "w" + Math.random().toString(36).slice(2, 10);
 
-function Gallery({ onAdd, onClose }: { onAdd: (def: WidgetDef) => void; onClose: () => void }) {
+export function Gallery({ onAdd, onClose, only }: {
+  onAdd: (def: WidgetDef) => void;
+  onClose: () => void;
+  /** Limit to these kinds (e.g. widgets that have a dock pill). */
+  only?: Set<string>;
+}) {
   const [q, setQ] = useState("");
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
-    return s ? WIDGETS.filter((w) => (w.name + " " + w.description + " " + w.category).toLowerCase().includes(s)) : WIDGETS;
-  }, [q]);
+    const pool = only ? WIDGETS.filter((w) => only.has(w.kind)) : WIDGETS;
+    return s ? pool.filter((w) => (w.name + " " + w.description + " " + w.category).toLowerCase().includes(s)) : pool;
+  }, [q, only]);
   return (
     <div className="w-gallery">
       <div className="w-row w-gap">
-        <input className="w-input" autoFocus placeholder={`Search ${WIDGETS.length} widgets…`} value={q} onChange={(e) => setQ(e.target.value)} />
+        <input className="w-input" autoFocus placeholder={`Search ${list.length} widgets…`} value={q} onChange={(e) => setQ(e.target.value)} />
         <button className="w-btn" onClick={onClose}>
           Close
         </button>
@@ -69,15 +52,10 @@ function Gallery({ onAdd, onClose }: { onAdd: (def: WidgetDef) => void; onClose:
 }
 
 export function Widgets() {
-  const [config, update] = useWidgetConfig();
+  const [config, update, updateShared] = useWidgetConfig();
   const [editing, setEditing] = useState(false);
   const [gallery, setGallery] = useState(false);
   const [configuring, setConfiguring] = useState<string | null>(null);
-
-  const updateShared = useCallback(
-    (patch: Partial<WidgetConfig>) => update((c) => ({ ...c, ...patch })),
-    [update],
-  );
 
   if (!config) return null;
 
