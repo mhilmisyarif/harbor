@@ -1,0 +1,58 @@
+name: Release
+
+# Push a tag like v0.2.0 after moving [Unreleased] entries into a dated
+# "## [0.2.0] - YYYY-MM-DD" section of CHANGELOG.md and bumping the version.
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Check tag, versions and changelog
+        run: node scripts/release-check.mjs --tag "${{ github.ref_name }}"
+
+      - name: Release notes from CHANGELOG.md
+        id: notes
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          {
+            echo "body<<__NOTES__"
+            node scripts/release-check.mjs --notes "$version"
+            echo "__NOTES__"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Verify frontend and backend
+        run: |
+          npm run check:frontend
+          npm run check:backend
+
+      - name: Build installers and draft the GitHub release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: Harbor ${{ github.ref_name }}
+          releaseBody: ${{ steps.notes.outputs.body }}
+          releaseDraft: true
+          prerelease: ${{ contains(github.ref_name, '-') }}

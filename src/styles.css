@@ -1,0 +1,144 @@
+:root {
+  --glass: rgba(28, 30, 38, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --text: #f2f4f8;
+  --muted: #a9b0bf;
+  --accent: #60a5fa;
+  font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  color: var(--text);
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: default;
+}
+
+/* ---------- Bar ---------- */
+
+.bar {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  font-size: 12.5px;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.bar-left, .bar-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bar-logo { font-size: 14px; padding: 0 6px; }
+
+.bar-title {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 45vw;
+}
+
+.bar-item {
+  padding: 3px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  color: var(--text);
+}
+button.bar-item:hover { background: rgba(255, 255, 255, 0.1); }
+.bar-clock { font-variant-numeric: tabular-nums; }
+
+/* ---------- Dock ---------- */
+
+.dock-stage {
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 4px;
+}
+
+.dock {
+  display: flex;
+  align-items: flex-end;
+  padding: 8px 14px 6px;
+  height: 76px;
+  border-radius: 22px;
+  background: var(--glass);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dock-item {
+  position: relative;
+  width: 64px;
+  height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.dock-icon {
+  width: 48px;
+  height: 48px;
+  transform: scale(var(--scale, 1));
+  transform-origin: bottom center;
+  transition: transform 90ms ease-out;
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.dock-fallback {
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  font-size: 22px;
+  font-weight: 700;
+  background: linear-gradient(160deg, #475569, #1e293b);
+}
+
+.dock-item:active .dock-icon { filter: brightness(0.75); }
+
+.dock-dot {
+  width: 4px;
+  height: 4px;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: transparent;
+}
+.dock-dot.on { background: var(--muted); }
+.dock-item.focused .dock-dot { background: var(--accent); width: 14px; border-radius: 2px; }
+
+.dock-tip {
+  position: absolute;
+  bottom: calc(62px * var(--scale, 1) + 4px);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  white-space: nowrap;
+  background: rgba(20, 22, 28, 0.92);
+  border: 1px solid var(--glass-border);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms;
+}
+.dock-item:hover .dock-tip { opacity: 1; }

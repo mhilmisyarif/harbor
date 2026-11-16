@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    name: Frontend (typecheck + build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run check:frontend
+      - run: npm run check:release
+
+  backend:
+    name: Backend (fmt + clippy + test)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      # tauri::generate_context! embeds the built frontend, so it must exist.
+      - run: npm run build
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npm run check:backend
+
+  changelog:
+    name: Changelog updated
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Require a CHANGELOG.md entry
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          SKIP: ${{ contains(github.event.pull_request.labels.*.name, 'skip-changelog') }}
+        run: |
+          if [ "$SKIP" = "true" ]; then
+            echo "skip-changelog label set; not requiring an entry."
+            exit 0
+          fi
+          if ! git diff --name-only "$BASE"...HEAD | grep -qx CHANGELOG.md; then
+            echo "::error file=CHANGELOG.md::Add an entry under [Unreleased] (or label the PR skip-changelog for changes users can't see)."
+            exit 1
+          fi
+
+  bundle:
+    name: Installer build
+    needs: [frontend, backend]
+    if: github.event_name == 'push'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - run: npx tauri build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: harbor-installers-${{ github.sha }}
+          path: |
+            src-tauri/target/release/bundle/msi/*.msi
+            src-tauri/target/release/bundle/nsis/*.exe
+          if-no-files-found: error
+          retention-days: 14
