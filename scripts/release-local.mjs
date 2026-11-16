@@ -94,7 +94,7 @@ if (dryRun) {
 
 // ---------- tag and publish ----------
 
-run("git", ["tag", "-a", tag, "-m", `${product} ${tag}`]);
+run("git", ["tag", "-a", tag, "-m", `"${product} ${tag}"`]);
 run("git", ["push", "origin", tag]);
 run("gh", [
   "release",
