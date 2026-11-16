@@ -26,6 +26,9 @@ pub struct PinnedApp {
     pub name: String,
     /// Exe/lnk/folder path, or `shell:AppsFolder\<AppUserModelID>`.
     pub path: String,
+    /// Pinned apps sharing a group name collapse into one folder icon on the dock.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
 }
 
 /// One slot in the dock strip: the app icons, a widget pill, or a divider.
@@ -223,10 +226,12 @@ impl Default for Config {
                 PinnedApp {
                     name: "File Explorer".into(),
                     path: r"C:\Windows\explorer.exe".into(),
+                    group: None,
                 },
                 PinnedApp {
                     name: "Notepad".into(),
                     path: r"C:\Windows\System32\notepad.exe".into(),
+                    group: None,
                 },
             ],
             dock: DockSettings::default(),
@@ -289,6 +294,11 @@ impl Config {
         self.pinned.retain(|p| !p.path.trim().is_empty());
         for p in &mut self.pinned {
             p.name = p.name.trim().chars().take(60).collect();
+            p.group = p
+                .group
+                .take()
+                .map(|g| g.trim().chars().take(30).collect::<String>())
+                .filter(|g| !g.is_empty());
         }
         self.icon_overrides = self
             .icon_overrides
@@ -383,6 +393,7 @@ mod tests {
         c.pinned.push(PinnedApp {
             name: "  Blank ".into(),
             path: "  ".into(),
+            group: None,
         });
         c.icon_overrides
             .insert("C:\\A.EXE".into(), "data:image/png;base64,AAAA".into());

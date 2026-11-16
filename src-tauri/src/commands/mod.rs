@@ -10,6 +10,7 @@ pub mod calendar;
 pub mod icons;
 pub mod layout;
 pub mod media;
+pub mod preview;
 pub mod screen_time;
 pub mod stats;
 pub mod system_controls;
