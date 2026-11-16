@@ -6,12 +6,17 @@ use std::mem::size_of;
 use windows::{
     core::PWSTR,
     Win32::{
-        Foundation::{CloseHandle, BOOL, HWND, LPARAM, TRUE, WPARAM},
+        Foundation::{CloseHandle, BOOL, HANDLE, HWND, LPARAM, TRUE, WPARAM},
         Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED},
+        Storage::{
+            EnhancedStorage::PKEY_AppUserModel_ID, Packaging::Appx::GetApplicationUserModelId,
+        },
+        System::Com::{CoTaskMemFree, StructuredStorage::PropVariantToStringAlloc},
         System::Threading::{
             OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
             PROCESS_QUERY_LIMITED_INFORMATION,
         },
+        UI::Shell::PropertiesSystem::{IPropertyStore, SHGetPropertyStoreForWindow},
         UI::WindowsAndMessaging::{
             EnumWindows, GetForegroundWindow, GetWindow, GetWindowLongPtrW, GetWindowTextLengthW,
             GetWindowTextW, GetWindowThreadProcessId, IsIconic, IsWindowVisible, PostMessageW,
@@ -30,6 +35,10 @@ pub struct WindowInfo {
     id: isize,
     title: String,
     exe: String,
+    /// What the dock uses for the icon and for launching/pinning: the exe path,
+    /// or `shell:AppsFolder\<AppUserModelID>` for packaged (Store) apps, whose
+    /// exe under WindowsApps can't be launched directly.
+    icon_source: String,
     focused: bool,
     minimized: bool,
 }
@@ -50,20 +59,52 @@ pub fn window_title(h: HWND) -> String {
     }
 }
 
-fn process_path(pid: u32) -> Option<String> {
+/// Executable path and (for packaged apps) AppUserModelID of a process.
+fn process_info(pid: u32) -> (Option<String>, Option<String>) {
     unsafe {
-        let handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, BOOL(0), pid).ok()?;
-        let mut buf = [0u16; 1024];
-        let mut size = buf.len() as u32;
-        let ok = QueryFullProcessImageNameW(
-            handle,
-            PROCESS_NAME_WIN32,
-            PWSTR(buf.as_mut_ptr()),
-            &mut size,
-        );
+        let Ok(handle) = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, BOOL(0), pid) else {
+            return (None, None);
+        };
+        let path = image_path(handle);
+        let aumid = package_app_id(handle);
         let _ = CloseHandle(handle);
-        ok.ok()?;
-        Some(String::from_utf16_lossy(&buf[..size as usize]))
+        (path, aumid)
+    }
+}
+
+unsafe fn image_path(handle: HANDLE) -> Option<String> {
+    let mut buf = [0u16; 1024];
+    let mut size = buf.len() as u32;
+    QueryFullProcessImageNameW(
+        handle,
+        PROCESS_NAME_WIN32,
+        PWSTR(buf.as_mut_ptr()),
+        &mut size,
+    )
+    .ok()?;
+    Some(String::from_utf16_lossy(&buf[..size as usize]))
+}
+
+unsafe fn package_app_id(handle: HANDLE) -> Option<String> {
+    let mut buf = [0u16; 256];
+    let mut len = buf.len() as u32;
+    // Returns APPMODEL_ERROR_NO_APPLICATION for ordinary (unpackaged) processes.
+    if GetApplicationUserModelId(handle, &mut len, PWSTR(buf.as_mut_ptr())).0 != 0 {
+        return None;
+    }
+    let s = String::from_utf16_lossy(&buf[..len.saturating_sub(1) as usize]);
+    (!s.is_empty()).then_some(s)
+}
+
+/// Explicit AppUserModelID set on the window (PWAs, some desktop apps).
+fn window_app_id(h: HWND) -> Option<String> {
+    unsafe {
+        let store: IPropertyStore = SHGetPropertyStoreForWindow(h).ok()?;
+        let value = store.GetValue(&PKEY_AppUserModel_ID).ok()?;
+        let text = PropVariantToStringAlloc(&value).ok()?;
+        let s = text.to_string().ok();
+        CoTaskMemFree(Some(text.0 as *const c_void));
+        s.filter(|s| !s.is_empty())
     }
 }
 
@@ -123,10 +164,17 @@ pub fn list_windows() -> Vec<WindowInfo> {
             if pid == own_pid {
                 return None;
             }
+            let (exe, package_id) = process_info(pid);
+            let exe = exe.unwrap_or_default();
+            let icon_source = window_app_id(h)
+                .or(package_id)
+                .map(|id| format!(r"shell:AppsFolder\{id}"))
+                .unwrap_or_else(|| exe.clone());
             Some(WindowInfo {
                 id: h.0 as isize,
                 title: window_title(h),
-                exe: process_path(pid).unwrap_or_default(),
+                exe,
+                icon_source,
                 focused: h == fg,
                 minimized: unsafe { IsIconic(h) }.as_bool(),
             })

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Settings window, opened from the tray, the dock's or bar's right-click menu, or
+  the widget panel:
+  - Dock: icon size, magnification on hover (and how much), and whether to show
+    running apps that aren't pinned.
+  - Pinned apps: rename, reorder, remove, add with a file picker, and set a
+    custom icon from an image, `.ico`, `.exe` or `.lnk`.
+  - Menu bar: choose which readouts to show (CPU, memory, battery, volume,
+    weather), seconds in the clock and a 24-hour clock.
+  - Start with Windows.
+- "Change icon…" and "Reset icon" in the dock's right-click menu, for pinned and
+  running apps.
+- Store apps (such as Windows Terminal, WhatsApp or Spotify) are recognised by
+  their app ID, so they get their real logo and pinning them launches the app.
+
+### Changed
+
+- Dock icons are extracted at 128 px, so they stay sharp on high-DPI displays.
+- Changes made in Settings apply to the bar and dock immediately.
+
+### Fixed
+
+- Some dock icons (for example Notepad and Task Manager) showed only a letter.
+  Icons are now extracted one at a time on a dedicated thread, and a failed
+  lookup is retried instead of being remembered until restart.
+- The dock no longer reappears on its own after being hidden with `Alt+D`
+  when apps open or close.
+
 ## [0.0.1] - 2026-11-16
 
 First public build.

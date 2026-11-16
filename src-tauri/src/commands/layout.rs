@@ -7,6 +7,7 @@ use windows::Win32::Foundation::HWND;
 use super::{appbar, err, CmdResult};
 
 pub const BAR_HEIGHT: f64 = 30.0;
+/// Initial dock height; the dock recomputes it from the icon size via `layout_dock`.
 pub const DOCK_HEIGHT: f64 = 140.0;
 const DOCK_MARGIN: f64 = 6.0;
 
@@ -43,7 +44,9 @@ pub fn release_bar() {
     }
 }
 
-pub fn place_dock(app: &AppHandle, width: f64) -> tauri::Result<()> {
+/// Sizes and centers the dock above the work area's bottom edge. `show` is only
+/// set at startup, so a relayout never re-shows a dock the user hid (Alt+D).
+pub fn place_dock(app: &AppHandle, width: f64, height: f64, show: bool) -> tauri::Result<()> {
     let Some(w) = app.get_webview_window("dock") else {
         return Ok(());
     };
@@ -54,13 +57,15 @@ pub fn place_dock(app: &AppHandle, width: f64) -> tauri::Result<()> {
     let scale = mon.scale_factor();
     let wa = mon.work_area();
     let w_px = (width * scale).round() as i32;
-    let h_px = (DOCK_HEIGHT * scale).round() as i32;
+    let h_px = (height * scale).round() as i32;
     let x = wa.position.x + (wa.size.width as i32 - w_px) / 2;
     let y = wa.position.y + wa.size.height as i32 - h_px - (DOCK_MARGIN * scale) as i32;
 
     w.set_size(PhysicalSize::new(w_px as u32, h_px as u32))?;
     w.set_position(PhysicalPosition::new(x, y))?;
-    w.show()?;
+    if show {
+        w.show()?;
+    }
     Ok(())
 }
 
@@ -117,8 +122,27 @@ pub fn toggle_widgets(app: AppHandle) -> CmdResult<()> {
     w.set_focus().map_err(err)
 }
 
-/// Called by the dock whenever its item count changes.
+/// Called by the dock whenever its item count or icon size changes.
 #[tauri::command]
-pub fn layout_dock(app: AppHandle, width: f64) -> CmdResult<()> {
-    place_dock(&app, width).map_err(err)
+pub fn layout_dock(app: AppHandle, width: f64, height: f64) -> CmdResult<()> {
+    let width = width.clamp(120.0, 4000.0);
+    let height = height.clamp(60.0, 400.0);
+    place_dock(&app, width, height, false).map_err(err)
+}
+
+/// Shows the settings window (tray, dock menu or widget panel).
+pub fn show_settings(app: &AppHandle) -> tauri::Result<()> {
+    let Some(w) = app.get_webview_window("settings") else {
+        return Ok(());
+    };
+    if w.is_minimized()? {
+        w.unminimize()?;
+    }
+    w.show()?;
+    w.set_focus()
+}
+
+#[tauri::command]
+pub fn open_settings(app: AppHandle) -> CmdResult<()> {
+    show_settings(&app).map_err(err)
 }

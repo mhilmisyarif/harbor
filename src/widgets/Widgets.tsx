@@ -485,6 +485,9 @@ export function Widgets() {
       <CurrencyCard config={config} update={update} />
       <SystemCard />
       <CalendarCard />
+      <button className="w-link w-settings" onClick={() => api.openSettings()}>
+        ⚙ Settings
+      </button>
     </div>
   );
 }

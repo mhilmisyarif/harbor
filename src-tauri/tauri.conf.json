@@ -54,6 +54,17 @@
         "shadow": false,
         "visible": false,
         "dragDropEnabled": false
+      },
+      {
+        "label": "settings",
+        "title": "Harbor Settings",
+        "width": 560,
+        "height": 720,
+        "minWidth": 460,
+        "minHeight": 480,
+        "center": true,
+        "visible": false,
+        "dragDropEnabled": false
       }
     ],
     "security": { "csp": null }

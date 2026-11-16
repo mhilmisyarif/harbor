@@ -1,6 +1,6 @@
 mod commands;
 
-use commands::{apps, audio, layout, stats, widgets, windows_list};
+use commands::{apps, audio, icons, layout, stats, widgets, windows_list};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
@@ -26,14 +26,18 @@ fn create_tray(app: &AppHandle) -> tauri::Result<()> {
         true,
         None::<&str>,
     )?;
+    let settings = MenuItem::with_id(app, "settings", "Settings…", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, "quit", "Quit Harbor", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&toggle, &quit])?;
+    let menu = Menu::with_items(app, &[&toggle, &settings, &quit])?;
 
     let mut builder = TrayIconBuilder::with_id("main")
         .tooltip("Harbor")
         .menu(&menu)
         .on_menu_event(|app, event| match event.id.as_ref() {
             "toggle" => toggle_dock(app),
+            "settings" => {
+                let _ = layout::show_settings(app);
+            }
             "quit" => {
                 layout::release_bar();
                 app.exit(0);
@@ -71,6 +75,7 @@ pub fn run() {
                 })
                 .build(),
         )
+        .plugin(tauri_plugin_dialog::init())
         .manage(stats::StatsState::default())
         .manage(widgets::Http::default())
         .manage(widgets::NetState::default())
@@ -80,7 +85,7 @@ pub fn run() {
                 .register(Shortcut::new(Some(Modifiers::ALT), Code::KeyD))?;
             create_tray(handle)?;
             layout::place_bar(handle)?;
-            layout::place_dock(handle, 480.0)?;
+            layout::place_dock(handle, 480.0, layout::DOCK_HEIGHT, true)?;
             Ok(())
         })
         .on_window_event(|window, event| match event {
@@ -105,12 +110,14 @@ pub fn run() {
             apps::load_config,
             apps::save_config,
             apps::launch_app,
-            apps::app_icon,
+            icons::app_icon,
+            icons::load_custom_icon,
             audio::get_volume,
             audio::set_volume,
             audio::toggle_mute,
             layout::layout_dock,
             layout::toggle_widgets,
+            layout::open_settings,
             widgets::weather,
             widgets::geocode,
             widgets::locate_by_ip,

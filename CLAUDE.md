@@ -3,7 +3,10 @@
 Harbor is a Windows dock and menu bar: **Tauri 2** with a Rust backend (`src-tauri/`)
 and a **React + TypeScript + Vite** frontend (`src/`). The backend talks to Win32
 directly (appbar, window list, Core Audio, shell icons). The frontend is one bundle
-that renders a different surface per window label (`bar`, `dock`, `widgets`).
+that renders a different surface per window label (`bar`, `dock`, `widgets`, `settings`).
+The dock/bar config is owned by the backend: `save_config` sanitizes and broadcasts
+`config-changed`, and every window follows it through `useConfig()` in `src/lib/config.ts`.
+Never keep a private copy of the config in a window and save it back wholesale.
 
 ## 1. Every change is verified on both backend and frontend
 

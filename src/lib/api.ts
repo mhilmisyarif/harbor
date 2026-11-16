@@ -12,6 +12,8 @@ export interface WindowInfo {
   id: number;
   title: string;
   exe: string;
+  /** Exe path, or `shell:AppsFolder\<AppUserModelID>` for packaged apps. */
+  iconSource: string;
   focused: boolean;
   minimized: boolean;
 }
@@ -21,10 +23,33 @@ export interface PinnedApp {
   path: string;
 }
 
+export interface DockSettings {
+  iconSize: number;
+  magnify: boolean;
+  magnifyScale: number;
+  showRunning: boolean;
+}
+
+export interface BarSettings {
+  showCpu: boolean;
+  showRam: boolean;
+  showBattery: boolean;
+  showVolume: boolean;
+  showWeather: boolean;
+  showSeconds: boolean;
+  clock24h: boolean;
+}
+
 export interface Config {
   pinned: PinnedApp[];
-  showSeconds: boolean;
+  dock: DockSettings;
+  bar: BarSettings;
+  /** Custom PNG data-URL icons keyed by lower-cased icon source. */
+  iconOverrides: Record<string, string>;
 }
+
+/** Emitted by the backend after every save, with the saved Config. */
+export const CONFIG_EVENT = "config-changed";
 
 export interface Volume {
   level: number;
@@ -38,13 +63,15 @@ export const api = {
   close: (id: number) => invoke<void>("close_window", { id }),
   foregroundTitle: () => invoke<string>("foreground_title"),
   loadConfig: () => invoke<Config>("load_config"),
-  saveConfig: (config: Config) => invoke<void>("save_config", { config }),
+  saveConfig: (config: Config) => invoke<Config>("save_config", { config }),
   launch: (path: string) => invoke<void>("launch_app", { path }),
-  icon: (path: string) => invoke<string | null>("app_icon", { path }),
+  icon: (source: string) => invoke<string | null>("app_icon", { source }),
+  loadCustomIcon: (path: string) => invoke<string>("load_custom_icon", { path }),
+  openSettings: () => invoke<void>("open_settings"),
   volume: () => invoke<Volume>("get_volume"),
   setVolume: (level: number) => invoke<Volume>("set_volume", { level }),
   toggleMute: () => invoke<Volume>("toggle_mute"),
-  layoutDock: (width: number) => invoke<void>("layout_dock", { width }),
+  layoutDock: (width: number, height: number) => invoke<void>("layout_dock", { width, height }),
   toggleWidgets: () => invoke<void>("toggle_widgets"),
 
   // Widgets

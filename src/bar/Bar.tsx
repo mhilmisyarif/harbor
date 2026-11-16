@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { Menu } from "@tauri-apps/api/menu";
 import { api, poll, Stats, Volume, WeatherResponse, weatherLook, WIDGET_CONFIG_EVENT, WidgetConfig } from "../lib/api";
+import { useConfig } from "../lib/config";
 
 /** Compact current-weather readout; opens the widget panel on click. */
 function WeatherChip() {
@@ -64,16 +66,25 @@ function VolumeControl() {
   );
 }
 
+const onBarMenu = async (e: React.MouseEvent) => {
+  e.preventDefault();
+  const menu = await Menu.new({ items: [{ text: "Settings…", action: () => api.openSettings() }] });
+  await menu.popup();
+};
+
 export function Bar() {
   const now = useClock();
+  const [config] = useConfig();
   const [stats, setStats] = useState<Stats | null>(null);
   const [title, setTitle] = useState("");
 
   useEffect(() => poll(api.stats, 2000, setStats), []);
   useEffect(() => poll(api.foregroundTitle, 700, setTitle), []);
 
+  if (!config) return null;
+  const s = config.bar;
   return (
-    <div className="bar">
+    <div className="bar" onContextMenu={onBarMenu}>
       <div className="bar-left">
         <span className="bar-logo">⚓</span>
         <span className="bar-title" title={title}>
@@ -84,27 +95,36 @@ export function Bar() {
       <div className="bar-right">
         {stats && (
           <>
-            <span className="bar-item" title="CPU usage">
-              CPU {Math.round(stats.cpu)}%
-            </span>
-            <span className="bar-item" title="Memory in use">
-              RAM {fmtGB(stats.memUsed)}/{fmtGB(stats.memTotal)} GB
-            </span>
-            {stats.battery !== null && (
+            {s.showCpu && (
+              <span className="bar-item" title="CPU usage">
+                CPU {Math.round(stats.cpu)}%
+              </span>
+            )}
+            {s.showRam && (
+              <span className="bar-item" title="Memory in use">
+                RAM {fmtGB(stats.memUsed)}/{fmtGB(stats.memTotal)} GB
+              </span>
+            )}
+            {s.showBattery && stats.battery !== null && (
               <span className="bar-item" title={stats.charging ? "Charging" : "On battery"}>
                 {stats.charging ? "⚡" : "🔋"} {stats.battery}%
               </span>
             )}
           </>
         )}
-        <VolumeControl />
-        <WeatherChip />
+        {s.showVolume && <VolumeControl />}
+        {s.showWeather && <WeatherChip />}
         <button className="bar-item" title="Widgets" onClick={() => api.toggleWidgets()}>
           ▦
         </button>
         <span className="bar-item bar-clock">
           {now.toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}{" "}
-          {now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}
+          {now.toLocaleTimeString(undefined, {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: s.showSeconds ? "2-digit" : undefined,
+            hour12: !s.clock24h,
+          })}
         </span>
       </div>
     </div>

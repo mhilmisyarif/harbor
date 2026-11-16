@@ -37,6 +37,12 @@ the MSI directly, so it was first unpacked with `msiexec /a`.
     a currency converter (Frankfurter/ECB).
   - A system card shows network speed, disk usage and uptime, and a calendar card shows the month.
   - None of these need an API key.
+- **Settings window.** Open it from the tray, by right-clicking the dock or bar, or from the
+  widget panel.
+  - Dock: icon size, magnification, and whether to show running apps.
+  - Pinned apps: rename, reorder, add, remove and set custom icons.
+  - Bar: which readouts appear, and the clock format.
+  - Start with Windows.
 - **Config.** Saved to `%APPDATA%\dev.harbor.shell\config.json` (dock) and `widgets.json` (widgets).
 
 ```
