@@ -1,12 +1,16 @@
-import React from "react";
+import React, { ReactNode } from "react";
 import ReactDOM from "react-dom/client";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Bar } from "./bar/Bar";
+import { Card } from "./card/Card";
 import { Dock } from "./dock/Dock";
-import { Widgets } from "./widgets/Widgets";
+import { useConfig } from "./lib/config";
 import { Settings } from "./settings/Settings";
+import { Widgets } from "./widgets/Widgets";
+import "./themes.css";
 import "./styles.css";
 import "./widgets/widgets.css";
+import "./card/card.css";
 import "./settings/settings.css";
 
 // One bundle serves every window; the window label picks the surface.
@@ -18,11 +22,23 @@ const surfaces: Record<string, () => JSX.Element | null> = {
   dock: Dock,
   widgets: Widgets,
   settings: Settings,
+  card: Card,
 };
 const Surface = surfaces[label] ?? Dock;
 
+/** Applies Settings → Appearance to this window (the settings window keeps its own look). */
+function Themed({ children }: { children: ReactNode }) {
+  const [config] = useConfig();
+  const style = config?.appearance.style ?? "glass";
+  // Set during render so children (e.g. Backdrop) see the new style immediately.
+  if (label !== "settings" && document.body.dataset.style !== style) document.body.dataset.style = style;
+  return <>{children}</>;
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <Surface />
+    <Themed>
+      <Surface />
+    </Themed>
   </React.StrictMode>,
 );

@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Widget cards: click any widget on the dock and its card slides out right
+  over it (downward when the dock is at the top). Related widgets open richer
+  cards: the clock opens a calendar, weather opens the next hours, the
+  forecast and sunrise & sunset, volume opens sound and microphone controls,
+  and CPU/RAM open top apps. A card's ⚙ edits that widget's settings.
+- Appearance styles in **Settings → Appearance**: Liquid Glass, iOS Glass,
+  Midnight, Black and White. They apply to the dock, bar, widget panel and
+  cards. The glass styles show your actual wallpaper, blurred, behind each
+  surface.
+- Dock spacing setting.
+- Edit the dock in place: right-click → **Edit dock** to drag items into a new
+  order, remove them with the − badge, or add widgets with ＋.
+- Drag the dock by an empty spot to the top or bottom half of the screen to
+  snap it there.
+- An **Update** button appears on the dock when a new version is available.
+
 ## [0.0.2] - 2026-11-16
 
 ### Added

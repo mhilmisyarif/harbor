@@ -15,7 +15,17 @@ function Pill({ children, onClick, title, className = "" }: {
   className?: string;
 }) {
   return (
-    <div className={"pill " + className + (onClick ? " pill-click" : "")} onClick={onClick} title={title}>
+    <div
+      className={"pill " + className + (onClick ? " pill-click" : "")}
+      title={title}
+      onClick={
+        onClick &&
+        ((e) => {
+          e.stopPropagation(); // the pill has its own action, so its card stays closed
+          onClick();
+        })
+      }
+    >
       {children}
     </div>
   );
@@ -191,7 +201,7 @@ const TodosPill = ({ id }: P) => {
   const done = todos.filter((t) => t.done).length;
   const open = todos.filter((t) => !t.done).slice(0, 2);
   return (
-    <Pill onClick={() => api.toggleWidgets()} title="Edit todos in the widget panel">
+    <Pill title="Click to see and edit your todos">
       <Ring value={todos.length ? done / todos.length : 0} size={36} stroke={4} color="#4ade80">
         <span className="pill-tiny">{todos.length - done}</span>
       </Ring>
@@ -217,7 +227,7 @@ const CurrencyPill = ({ shared }: P) => {
 
 const WeatherPill = ({ shared }: P) => {
   const { data } = useWeather(shared);
-  if (!shared.location) return <Pill onClick={() => api.toggleWidgets()}>🌤️ <span className="pill-sub">Set city</span></Pill>;
+  if (!shared.location) return <Pill title="Click to choose a city">🌤️ <span className="pill-sub">Set city</span></Pill>;
   if (!data) return <Pill>…</Pill>;
   const [icon, label] = weatherLook(data.current.weather_code, data.current.is_day === 1);
   return (
@@ -287,7 +297,7 @@ const CpuRamPill = () => {
   const { data } = useStats();
   const ram = data ? (data.memUsed / data.memTotal) * 100 : 0;
   return (
-    <Pill onClick={() => api.shellAction("task-manager")} title="Open Task Manager">
+    <Pill title="CPU and memory">
       <Ring value={(data?.cpu ?? 0) / 100} size={36} stroke={4}>
         <span className="pill-tiny">{data ? Math.round(data.cpu) : "–"}</span>
       </Ring>
@@ -302,7 +312,7 @@ const CpuRamPill = () => {
 const CpuPill = () => {
   const { data } = useStats();
   return (
-    <Pill onClick={() => api.shellAction("task-manager")}>
+    <Pill>
       <Ring value={(data?.cpu ?? 0) / 100} size={38} stroke={4}>
         <span className="pill-tiny">{data ? Math.round(data.cpu) : "–"}</span>
       </Ring>
@@ -315,7 +325,7 @@ const RamPill = () => {
   const { data } = useStats();
   const used = data ? data.memUsed / data.memTotal : 0;
   return (
-    <Pill onClick={() => api.shellAction("task-manager")}>
+    <Pill>
       <Ring value={used} size={38} stroke={4} color="#a78bfa">
         <span className="pill-tiny">{data ? Math.round(used * 100) : "–"}</span>
       </Ring>
@@ -497,7 +507,7 @@ const MicPill = () => {
 const RecyclePill = () => {
   const { data } = useShared("recycle-bin", api.recycleBin, 5000);
   return (
-    <Pill onClick={() => api.shellAction("recycle-bin")} title={data ? `${data.items} items, ${fmtBytes(data.bytes)}` : "Recycle Bin"}>
+    <Pill title={data ? `${data.items} items, ${fmtBytes(data.bytes)}` : "Recycle Bin"}>
       <span className="pill-icon">🗑️</span>
       {data && data.items > 0 && <span className="pill-badge">{data.items > 99 ? "99+" : data.items}</span>}
     </Pill>

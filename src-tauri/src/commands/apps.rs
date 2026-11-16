@@ -121,6 +121,26 @@ impl Default for BarSettings {
     }
 }
 
+pub const STYLES: [&str; 5] = ["glass", "ios-glass", "midnight", "black", "white"];
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct Appearance {
+    /// One of `STYLES`. The glass styles show the blurred wallpaper behind each surface.
+    pub style: String,
+    /// Gap between dock items, in px.
+    pub spacing: u32,
+}
+
+impl Default for Appearance {
+    fn default() -> Self {
+        Self {
+            style: "glass".into(),
+            spacing: 6,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase", default)]
 pub struct UpdateSettings {
@@ -146,6 +166,7 @@ pub struct Config {
     pub dock: DockSettings,
     pub bar: BarSettings,
     pub updates: UpdateSettings,
+    pub appearance: Appearance,
     /// Custom icons keyed by lower-cased icon source (pinned path or running app).
     pub icon_overrides: BTreeMap<String, String>,
 }
@@ -166,6 +187,7 @@ impl Default for Config {
             dock: DockSettings::default(),
             bar: BarSettings::default(),
             updates: UpdateSettings::default(),
+            appearance: Appearance::default(),
             icon_overrides: BTreeMap::new(),
         }
     }
@@ -205,6 +227,10 @@ impl Config {
             }
         }
         self.dock.items.truncate(MAX_DOCK_ITEMS);
+        if !STYLES.contains(&self.appearance.style.as_str()) {
+            self.appearance.style = Appearance::default().style;
+        }
+        self.appearance.spacing = self.appearance.spacing.min(24);
         self.pinned.retain(|p| !p.path.trim().is_empty());
         for p in &mut self.pinned {
             p.name = p.name.trim().chars().take(60).collect();
@@ -346,6 +372,21 @@ mod tests {
             .map(|e| e.kind)
             .collect();
         assert_eq!(kinds, vec!["apps", "widget:clock", "separator"]);
+    }
+
+    #[test]
+    fn unknown_styles_fall_back_to_the_default() {
+        let mut c = Config::default();
+        c.appearance.style = "comic-sans".into();
+        c.appearance.spacing = 999;
+        let c = c.sanitized();
+        assert_eq!(c.appearance.style, "glass");
+        assert_eq!(c.appearance.spacing, 24);
+        for s in STYLES {
+            let mut c = Config::default();
+            c.appearance.style = s.into();
+            assert_eq!(c.sanitized().appearance.style, s);
+        }
     }
 
     #[test]

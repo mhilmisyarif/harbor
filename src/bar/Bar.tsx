@@ -3,6 +3,7 @@ import { listen } from "@tauri-apps/api/event";
 import { Menu } from "@tauri-apps/api/menu";
 import { api, poll, Stats, Volume, WeatherResponse, weatherLook, WIDGET_CONFIG_EVENT, WidgetConfig } from "../lib/api";
 import { useConfig } from "../lib/config";
+import { Backdrop } from "../lib/Backdrop";
 
 /** Compact current-weather readout; opens the widget panel on click. */
 function WeatherChip() {
@@ -84,7 +85,8 @@ export function Bar() {
   if (!config) return null;
   const s = config.bar;
   return (
-    <div className="bar" onContextMenu={onBarMenu}>
+    <div className="bar has-backdrop" onContextMenu={onBarMenu}>
+      <Backdrop />
       <div className="bar-left">
         <span className="bar-logo">⚓</span>
         <span className="bar-title" title={title}>

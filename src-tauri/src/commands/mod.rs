@@ -11,6 +11,7 @@ pub mod media;
 pub mod stats;
 pub mod system_extra;
 pub mod taskbar;
+pub mod wallpaper;
 pub mod widgets;
 pub mod windows_list;
 

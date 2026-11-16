@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { api, WidgetInstance } from "../lib/api";
 import { useWidgetConfig } from "../lib/widgetConfig";
+import { Backdrop } from "../lib/Backdrop";
 import { CATEGORIES, widgetByKind, WIDGETS, WidgetDef } from "./registry";
 
 const newId = () => "w" + Math.random().toString(36).slice(2, 10);
@@ -76,7 +77,9 @@ export function Widgets() {
   };
 
   return (
-    <div className="w-panel">
+    <div className="w-shell has-backdrop">
+      <Backdrop />
+      <div className="w-panel">
       <header className="w-panel-head">
         <b>Widgets</b>
         <div className="w-row w-gap">
@@ -149,6 +152,7 @@ export function Widgets() {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 }

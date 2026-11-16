@@ -2,7 +2,9 @@ import { CSSProperties, useEffect, useLayoutEffect, useMemo, useRef, useState } 
 import { Menu } from "@tauri-apps/api/menu";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
+import { emit, listen } from "@tauri-apps/api/event";
 import { api, Config, DockEntry, exeName, poll, samePath, WindowInfo } from "../lib/api";
+import { Backdrop } from "../lib/Backdrop";
 import { iconKey, useConfig, useIcons } from "../lib/config";
 import { pickIcon } from "../lib/pickIcon";
 import { useWidgetConfig } from "../lib/widgetConfig";
@@ -243,40 +245,170 @@ export function Dock() {
       .catch(console.error);
   }, [winWidth, winHeight, strip, d?.position, d?.style, d?.reserveSpace, contentWidth > 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ---------- edit mode: drag to reorder, − to remove, + to add ----------
+
+  const [editing, setEditing] = useState(false);
+  const [drag, setDrag] = useState<{ id: string; startX: number; dx: number } | null>(null);
+  const [update_, setUpdate] = useState<string | null>(null);
+
+  // The settings window owns the updater; it tells the dock when there's something to install.
+  useEffect(() => {
+    const off = listen<{ version: string }>("update-available", (e) => setUpdate(e.payload.version));
+    return () => {
+      off.then((f) => f());
+    };
+  }, []);
+
+  const reorder = (id: string, clientX: number) => {
+    const els = Array.from(dockRef.current?.querySelectorAll<HTMLElement>("[data-entry]") ?? []);
+    const others = els.filter((el) => el.dataset.entry !== id);
+    let index = others.findIndex((el) => {
+      const r = el.getBoundingClientRect();
+      return clientX < r.left + r.width / 2;
+    });
+    if (index < 0) index = others.length;
+    update((c) => {
+      const items = [...c.dock.items];
+      const from = items.findIndex((e) => e.id === id);
+      if (from < 0) return c;
+      const [moved] = items.splice(from, 1);
+      const anchorId = others[index]?.dataset.entry;
+      const to = anchorId ? items.findIndex((e) => e.id === anchorId) : items.length;
+      items.splice(to < 0 ? items.length : to, 0, moved);
+      return { ...c, dock: { ...c.dock, items } };
+    });
+  };
+
+  const remove = (id: string) =>
+    update((c) => ({ ...c, dock: { ...c.dock, items: c.dock.items.filter((e) => e.id !== id) } }));
+
+  // ---------- drag an empty spot to snap the dock to the top or bottom ----------
+
+  const snap = useRef<{ y: number } | null>(null);
+  const onDockPointerDown = (e: React.PointerEvent) => {
+    const target = e.target as HTMLElement;
+    const empty = target === e.currentTarget || target.classList.contains("dock-items") || target.classList.contains("dock-spacer");
+    if (!empty || e.button !== 0) return;
+    snap.current = { y: e.screenY };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onDockPointerUp = (e: React.PointerEvent) => {
+    const s = snap.current;
+    snap.current = null;
+    if (!s || Math.abs(e.screenY - s.y) < 40) return;
+    const position = e.screenY < window.screen.height / 2 ? "top" : "bottom";
+    update((c) => (c.dock.position === position ? c : { ...c, dock: { ...c.dock, position } }));
+  };
+
   const onDockMenu = async (e: React.MouseEvent) => {
     e.preventDefault();
     const on = await isEnabled();
     const menu = await Menu.new({
       items: [
-        { text: "Customize dock…", action: () => api.openSettings() },
+        { text: editing ? "Done editing" : "Edit dock (add, remove, reorder)", action: () => setEditing(!editing) },
         { text: "Widgets…", action: () => api.toggleWidgets() },
+        { text: "Settings…", action: () => api.openSettings() },
         { text: on ? "✓ Start with Windows" : "Start with Windows", action: () => (on ? disable() : enable()) },
       ],
     });
     await menu.popup();
   };
 
+  const openCard = (kind: string, id: string, el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    api.openCard(kind, id, { x: r.left, y: r.top, width: r.width, height: r.height }).catch(console.error);
+  };
+
   if (!config || !d) return null;
+
+  const render = (entry: DockEntry) => {
+    switch (entry.kind) {
+      case "apps":
+        return <AppsGroup config={config} update={update} windows={windows} />;
+      case "separator":
+        return <span className="dock-sep" />;
+      case "spacer":
+        return null;
+      case "panel":
+        return <PanelButtonPill />;
+      default:
+        return entry.kind.startsWith("widget:") ? <DockWidget entry={entry} update={update} /> : null;
+    }
+  };
+
   return (
     <div
-      className={`dock-stage dock-${d.position} dock-${d.style}`}
-      style={{ "--icon": `${size}px`, "--slot": `${size + 12}px`, "--strip": `${strip}px` } as CSSProperties}
+      className={`dock-stage dock-${d.position} dock-${d.style}` + (editing ? " dock-editing" : "")}
+      style={
+        {
+          "--icon": `${size}px`,
+          "--slot": `${size + 12}px`,
+          "--strip": `${strip}px`,
+          "--gap": `${config.appearance.spacing}px`,
+        } as CSSProperties
+      }
     >
-      <div className="dock" ref={dockRef} onContextMenu={onDockMenu}>
-        {d.items.map((entry) => {
-          switch (entry.kind) {
-            case "apps":
-              return <AppsGroup key={entry.id} config={config} update={update} windows={windows} />;
-            case "separator":
-              return <span key={entry.id} className="dock-sep" />;
-            case "spacer":
-              return <span key={entry.id} className="dock-spacer" />;
-            case "panel":
-              return <PanelButtonPill key={entry.id} />;
-            default:
-              return entry.kind.startsWith("widget:") ? <DockWidget key={entry.id} entry={entry} update={update} /> : null;
-          }
-        })}
+      <div className="dock has-backdrop" onContextMenu={onDockMenu} onPointerDown={onDockPointerDown} onPointerUp={onDockPointerUp}>
+        <Backdrop />
+        <div className="dock-items" ref={dockRef}>
+          {d.items.map((entry) => {
+            const isWidget = entry.kind.startsWith("widget:");
+            const dragging = drag?.id === entry.id;
+            return (
+              <div
+                key={entry.id}
+                data-entry={entry.id}
+                className={"dock-entry" + (entry.kind === "spacer" ? " dock-spacer" : "") + (dragging ? " dragging" : "")}
+                style={dragging ? { transform: `translateX(${drag.dx}px)` } : undefined}
+                onClick={(e) => {
+                  if (!editing && isWidget) openCard(entry.kind.slice(7), entry.id, e.currentTarget);
+                }}
+                onPointerDown={(e) => {
+                  if (!editing || e.button !== 0) return;
+                  e.stopPropagation();
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                  setDrag({ id: entry.id, startX: e.clientX, dx: 0 });
+                }}
+                onPointerMove={(e) => drag?.id === entry.id && setDrag({ ...drag, dx: e.clientX - drag.startX })}
+                onPointerUp={(e) => {
+                  if (drag?.id !== entry.id) return;
+                  if (Math.abs(drag.dx) > 6) reorder(entry.id, e.clientX);
+                  setDrag(null);
+                }}
+              >
+                {render(entry)}
+                {editing && entry.kind !== "apps" && (
+                  <button
+                    className="dock-remove"
+                    aria-label="Remove from dock"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      remove(entry.id);
+                    }}
+                  >
+                    −
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {update_ && (
+            <button className="pill pill-click pill-update" title={`Install Harbor ${update_}`} onClick={() => emit("install-update")}>
+              ⬆ Update
+            </button>
+          )}
+          {editing && (
+            <>
+              <button className="pill pill-click dock-add" title="Add a widget" onClick={(e) => openCard("picker", "picker", e.currentTarget)}>
+                ＋
+              </button>
+              <button className="pill pill-click dock-done" onClick={() => setEditing(false)}>
+                Done
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

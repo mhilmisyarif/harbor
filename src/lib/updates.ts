@@ -1,7 +1,7 @@
 // In-app updates through the Tauri updater: checks GitHub Releases for a
 // signed newer build, downloads it, installs it and restarts Harbor.
 import { useEffect, useRef, useState } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { emit, listen } from "@tauri-apps/api/event";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check, Update } from "@tauri-apps/plugin-updater";
 import { notify } from "../widgets/kit";
@@ -27,6 +27,7 @@ export function useUpdater(settings: UpdateSettings | undefined) {
   const [state, setState] = useState<UpdateState>({ kind: "idle" });
   const busy = useRef(false);
   const notified = useRef<string | null>(null);
+  const found = useRef<Update | null>(null);
   const auto = useRef(settings);
   auto.current = settings;
 
@@ -59,6 +60,9 @@ export function useUpdater(settings: UpdateSettings | undefined) {
         setState({ kind: "current", checkedAt: new Date() });
       } else {
         setState({ kind: "available", update });
+        found.current = update;
+        // Lets the dock show its Update button.
+        emit("update-available", { version: update.version });
         if (!manual && auto.current?.autoInstall) {
           await install(update);
         } else if (!manual && notified.current !== update.version) {
@@ -85,9 +89,15 @@ export function useUpdater(settings: UpdateSettings | undefined) {
   }, [settings?.autoCheck]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const off = listen("check-updates", () => run(true));
+    const offs = [
+      listen("check-updates", () => run(true)),
+      // The dock's Update button.
+      listen("install-update", () => {
+        if (found.current) install(found.current);
+      }),
+    ];
     return () => {
-      off.then((f) => f());
+      offs.forEach((p) => p.then((f) => f()));
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

@@ -1,6 +1,5 @@
 :root {
-  --glass: rgba(28, 30, 38, 0.72);
-  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(var(--ink), 0.12);
   --text: #f2f4f8;
   --muted: #a9b0bf;
   --accent: #60a5fa;
@@ -9,6 +8,8 @@
 }
 
 * { box-sizing: border-box; }
+
+body { color: var(--text); }
 
 html, body, #root {
   margin: 0;
@@ -35,7 +36,7 @@ button {
   justify-content: space-between;
   padding: 0 10px;
   font-size: 12.5px;
-  background: var(--glass);
+  background: var(--surface);
   backdrop-filter: blur(20px);
   border-bottom: 1px solid var(--glass-border);
 }
@@ -63,7 +64,7 @@ button {
   white-space: nowrap;
   color: var(--text);
 }
-button.bar-item:hover { background: rgba(255, 255, 255, 0.1); }
+button.bar-item:hover { background: rgba(var(--ink), 0.1); }
 .bar-clock { font-variant-numeric: tabular-nums; }
 
 /* ---------- Dock ---------- */
@@ -79,16 +80,12 @@ button.bar-item:hover { background: rgba(255, 255, 255, 0.1); }
 .dock-floating.dock-top { padding-top: 4px; }
 
 .dock {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px;
   height: var(--strip, 68px);
   border-radius: 20px;
   /* Transparent windows can't blur the desktop, so stay mostly opaque. */
-  background: rgba(22, 24, 30, 0.9);
+  background: var(--surface);
   border: 1px solid var(--glass-border);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow);
 }
 .dock-full .dock {
   width: 100%;
@@ -169,15 +166,15 @@ button.bar-item:hover { background: rgba(255, 255, 255, 0.1); }
   gap: 8px;
   padding: 0 12px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: var(--tile);
+  border: 1px solid var(--tile-border);
   white-space: nowrap;
   font-size: 12px;
   position: relative;
   flex-shrink: 0;
 }
 .pill-click { cursor: pointer; }
-.pill-click:hover { background: rgba(255, 255, 255, 0.1); }
+.pill-click:hover { background: rgba(var(--ink), 0.1); }
 .pill-active { border-color: rgba(96, 165, 250, 0.6); }
 .pill-alert { border-color: rgba(248, 113, 113, 0.7); background: rgba(248, 113, 113, 0.15); }
 .pill-stack { display: flex; flex-direction: column; justify-content: center; min-width: 0; line-height: 1.25; }
@@ -196,13 +193,13 @@ button.bar-item:hover { background: rgba(255, 255, 255, 0.1); }
   display: grid;
   place-items: center;
   font-size: 13px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--ink), 0.1);
   flex-shrink: 0;
 }
 .pill-round:hover { filter: brightness(1.2); }
 .pill-link { color: var(--muted); font-size: 10.5px; padding: 0; }
 .pill-presets { display: flex; gap: 4px; }
-.pill-presets button { font-size: 10.5px; padding: 0 4px; border-radius: 4px; background: rgba(255, 255, 255, 0.1); }
+.pill-presets button { font-size: 10.5px; padding: 0 4px; border-radius: 4px; background: rgba(var(--ink), 0.1); }
 .pill-badge {
   position: absolute;
   top: 3px;
@@ -248,14 +245,14 @@ button.bar-item:hover { background: rgba(255, 255, 255, 0.1); }
 .pill-day { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
 .pill-spark { width: 64px; }
 .pill-dotgrid { display: grid; grid-template-columns: repeat(12, 7px); gap: 3px; }
-.pill-dotgrid span { width: 7px; height: 7px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); }
-.pill-dotgrid span.on { background: #f8fafc; }
+.pill-dotgrid span { width: 7px; height: 7px; border-radius: 50%; background: rgba(var(--ink), 0.12); }
+.pill-dotgrid span.on { background: var(--text); }
 
 .pill-media { max-width: 360px; }
 .pill-art { width: calc(var(--icon, 48px) * 0.8); height: calc(var(--icon, 48px) * 0.8); border-radius: 8px; object-fit: cover; flex-shrink: 0; }
-.pill-art-empty { display: grid; place-items: center; background: rgba(255, 255, 255, 0.08); }
+.pill-art-empty { display: grid; place-items: center; background: rgba(var(--ink), 0.08); }
 .pill-track { width: 160px; }
-.pill-progress { height: 3px; margin-top: 3px; border-radius: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+.pill-progress { height: 3px; margin-top: 3px; border-radius: 2px; background: rgba(var(--ink), 0.12); overflow: hidden; }
 .pill-progress div { height: 100%; background: var(--accent); }
 .pill-mini-play {
   width: 30px;
@@ -272,3 +269,41 @@ button.bar-item:hover { background: rgba(255, 255, 255, 0.1); }
 .pill-search { width: 220px; }
 .pill-input { flex: 1; background: none; border: 0; outline: none; color: var(--text); font: inherit; font-family: "Cascadia Mono", Consolas, monospace; }
 .pill-todos { max-width: 180px; font-size: 11px; }
+/* ---------- dock items and edit mode ---------- */
+
+.dock-items {
+  display: flex;
+  align-items: center;
+  gap: var(--gap, 6px);
+  height: 100%;
+  padding: 0 10px;
+}
+.dock-full .dock-items { width: 100%; }
+.dock-entry { position: relative; display: flex; align-items: center; height: 100%; }
+.dock-entry > .pill { cursor: pointer; }
+.dock-entry > .pill:hover { filter: brightness(1.12); }
+.dock-spacer { flex: 1; }
+.dock-editing .dock-entry { cursor: grab; animation: dock-wiggle 0.28s ease-in-out infinite alternate; }
+.dock-editing .dock-entry > * { pointer-events: none; }
+.dock-editing .dock-entry > .dock-remove { pointer-events: auto; }
+.dock-editing .dock-spacer { min-width: 24px; outline: 1px dashed var(--glass-border); border-radius: 8px; height: 60%; }
+.dock-entry.dragging { z-index: 5; opacity: 0.85; cursor: grabbing; animation: none; }
+@keyframes dock-wiggle { from { transform: rotate(-0.6deg); } to { transform: rotate(0.6deg); } }
+.dock-remove {
+  position: absolute;
+  top: 2px;
+  left: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 800;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+  z-index: 6;
+}
+.dock-add, .dock-done { font-weight: 700; padding: 0 14px; }
+.dock-add { font-size: 18px; }
+.pill-update { background: var(--accent) !important; color: #0b1220; font-weight: 700; }

@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { BarSettings, Config, DockSettings, exeName, PinnedApp, samePath } from "../lib/api";
+import { AppearanceStyle, BarSettings, Config, DockSettings, exeName, PinnedApp, samePath } from "../lib/api";
 import { iconKey, useConfig, useIcons } from "../lib/config";
 import { pickApp, pickIcon } from "../lib/pickIcon";
 import { DockLayoutSection } from "./DockLayout";
@@ -331,12 +331,45 @@ function UpdatesSection({ config, update }: { config: Config; update: Update }) 
   );
 }
 
+const STYLES: { id: AppearanceStyle; name: string; hint: string; preview: string }[] = [
+  { id: "glass", name: "Liquid Glass", hint: "Your wallpaper, blurred", preview: "linear-gradient(135deg, rgba(120,90,255,.55), rgba(255,120,90,.45))" },
+  { id: "ios-glass", name: "iOS Glass", hint: "Brighter, frosted", preview: "linear-gradient(135deg, rgba(255,255,255,.55), rgba(160,200,255,.45))" },
+  { id: "midnight", name: "Midnight", hint: "Deep navy", preview: "linear-gradient(135deg, #0b1230, #1c2a5c)" },
+  { id: "black", name: "Black", hint: "Solid and quiet", preview: "#0a0b0e" },
+  { id: "white", name: "White", hint: "Light and clean", preview: "#f6f6f9" },
+];
+
+function AppearanceSection({ config, update }: { config: Config; update: Update }) {
+  const a = config.appearance;
+  const set = (patch: Partial<Config["appearance"]>) => update((c) => ({ ...c, appearance: { ...c.appearance, ...patch } }));
+  return (
+    <Section title="Appearance">
+      <div className="s-styles" role="radiogroup" aria-label="Style">
+        {STYLES.map((s) => (
+          <button key={s.id} role="radio" aria-checked={a.style === s.id} className={"s-style" + (a.style === s.id ? " on" : "")} onClick={() => set({ style: s.id })}>
+            <span className="s-style-preview" style={{ background: s.preview }}>
+              <span className={"s-style-pill" + (s.id === "white" ? " light" : "")} />
+              <span className={"s-style-pill" + (s.id === "white" ? " light" : "")} />
+            </span>
+            <b>{s.name}</b>
+            <span className="s-hint">{s.hint}</span>
+          </button>
+        ))}
+      </div>
+      <Row label="Spacing" hint="Gap between items on the dock.">
+        <Slider label="Spacing" value={a.spacing} min={0} max={24} step={1} format={(v) => `${v}px`} onChange={(spacing) => set({ spacing })} />
+      </Row>
+    </Section>
+  );
+}
+
 export function Settings() {
   const [config, update] = useConfig();
   if (!config) return null;
   return (
     <main className="s-page">
       <h1>Settings</h1>
+      <AppearanceSection config={config} update={update} />
       <DockLayoutSection config={config} update={update} Row={Row} Toggle={Toggle} />
       <DockSection dock={config.dock} update={update} />
       <PinnedSection config={config} update={update} />

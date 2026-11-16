@@ -1,7 +1,8 @@
 mod commands;
 
 use commands::{
-    apps, audio, icons, layout, media, stats, system_extra, taskbar, widgets, windows_list,
+    apps, audio, icons, layout, media, stats, system_extra, taskbar, wallpaper, widgets,
+    windows_list,
 };
 use tauri::{
     menu::{Menu, MenuItem},
@@ -120,6 +121,11 @@ pub fn run() {
                 let _ = window.hide();
                 layout::note_widgets_hidden();
             }
+            // Widget cards close when you click anywhere else.
+            WindowEvent::Focused(false) if window.label() == "card" => {
+                let _ = window.hide();
+                layout::note_card_hidden();
+            }
             _ => {}
         })
         .invoke_handler(tauri::generate_handler![
@@ -153,6 +159,10 @@ pub fn run() {
             layout::toggle_widgets,
             layout::open_settings,
             layout::set_bar_enabled,
+            layout::open_card,
+            layout::place_card,
+            layout::close_card,
+            wallpaper::desktop_wallpaper,
             taskbar::set_taskbar_hidden,
             widgets::weather,
             widgets::geocode,

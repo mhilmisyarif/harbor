@@ -65,6 +65,26 @@ export interface BarSettings {
   clock24h: boolean;
 }
 
+export type AppearanceStyle = "glass" | "ios-glass" | "midnight" | "black" | "white";
+
+export interface Appearance {
+  style: AppearanceStyle;
+  spacing: number;
+}
+
+export interface ClientRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface CardOpen {
+  kind: string;
+  entryId: string;
+  up: boolean;
+}
+
 export interface UpdateSettings {
   autoCheck: boolean;
   autoInstall: boolean;
@@ -75,6 +95,7 @@ export interface Config {
   dock: DockSettings;
   bar: BarSettings;
   updates: UpdateSettings;
+  appearance: Appearance;
   /** Custom PNG data-URL icons keyed by lower-cased icon source. */
   iconOverrides: Record<string, string>;
 }
@@ -105,6 +126,11 @@ export const api = {
   layoutDock: (geometry: DockGeometry) => invoke<void>("layout_dock", { geometry }),
   setBarEnabled: (enabled: boolean) => invoke<void>("set_bar_enabled", { enabled }),
   setTaskbarHidden: (hidden: boolean) => invoke<void>("set_taskbar_hidden", { hidden }),
+  openCard: (kind: string, entryId: string, rect: ClientRect) =>
+    invoke<void>("open_card", { card: { kind, entryId }, rect }),
+  placeCard: (width: number, height: number) => invoke<void>("place_card", { width, height }),
+  closeCard: () => invoke<void>("close_card"),
+  desktopWallpaper: (width: number, height: number) => invoke<string | null>("desktop_wallpaper", { width, height }),
   toggleWidgets: () => invoke<void>("toggle_widgets"),
 
   // Widgets

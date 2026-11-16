@@ -189,7 +189,7 @@ export function Ring({ value, size = 76, stroke = 8, color = "var(--accent)", ch
   return (
     <div className="w-ring" style={{ width: size, height: size }}>
       <svg width={size} height={size}>
-        <circle cx={size / 2} cy={size / 2} r={r} stroke="rgba(255,255,255,.1)" strokeWidth={stroke} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={r} style={{ stroke: "rgba(var(--ink), .12)" }} strokeWidth={stroke} fill="none" />
         <circle
           cx={size / 2}
           cy={size / 2}

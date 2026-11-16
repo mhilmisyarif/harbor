@@ -2,7 +2,7 @@
 //! or full width, optionally reserving screen space) and the widget panel.
 
 use std::sync::atomic::{AtomicIsize, Ordering};
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize};
+use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize};
 use windows::Win32::Foundation::{HWND, RECT};
 
 use super::{
@@ -244,6 +244,179 @@ pub fn toggle_widgets(app: AppHandle) -> CmdResult<()> {
     w.set_position(PhysicalPosition::new(x, y)).map_err(err)?;
     w.show().map_err(err)?;
     w.set_focus().map_err(err)
+}
+
+// ---------- widget cards ----------
+
+/// A rectangle in the calling window's CSS pixels (from getBoundingClientRect).
+#[derive(serde::Deserialize, Clone, Copy, Debug)]
+pub struct ClientRect {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub height: f64,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct CardRequest {
+    /// What to show: a widget kind, or `picker` for the widget picker.
+    pub kind: String,
+    /// Dock entry the card belongs to (its settings live there).
+    pub entry_id: String,
+}
+
+#[derive(serde::Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct CardOpen {
+    kind: String,
+    entry_id: String,
+    /// True when the card opens upward (dock at the bottom).
+    up: bool,
+}
+
+struct CardState {
+    entry_id: String,
+    anchor: RECT,
+    up: bool,
+}
+
+static CARD: std::sync::Mutex<Option<CardState>> = std::sync::Mutex::new(None);
+static CARD_HIDDEN: std::sync::Mutex<Option<(std::time::Instant, String)>> =
+    std::sync::Mutex::new(None);
+const CARD_GAP: f64 = 8.0;
+
+/// Called when the card loses focus and hides itself.
+pub fn note_card_hidden() {
+    let id = CARD
+        .lock()
+        .ok()
+        .and_then(|c| c.as_ref().map(|s| s.entry_id.clone()));
+    if let (Ok(mut h), Some(id)) = (CARD_HIDDEN.lock(), id) {
+        *h = Some((std::time::Instant::now(), id));
+    }
+}
+
+/// A dock pill was clicked: remember where it is and ask the card window to
+/// render; it calls `place_card` once it knows its size. Clicking the same
+/// pill again closes the card.
+#[tauri::command]
+pub fn open_card(
+    app: AppHandle,
+    window: tauri::WebviewWindow,
+    card: CardRequest,
+    rect: ClientRect,
+) -> CmdResult<()> {
+    let Some(card_win) = app.get_webview_window("card") else {
+        return Ok(());
+    };
+    let same = CARD
+        .lock()
+        .ok()
+        .and_then(|c| c.as_ref().map(|s| s.entry_id == card.entry_id))
+        .unwrap_or(false);
+    if card_win.is_visible().map_err(err)? {
+        card_win.hide().map_err(err)?;
+        if same {
+            return Ok(());
+        }
+    }
+    // The click that opened this toggle blurred (and hid) the card a moment ago.
+    let just_closed = CARD_HIDDEN
+        .lock()
+        .ok()
+        .and_then(|h| h.clone())
+        .is_some_and(|(at, id)| id == card.entry_id && at.elapsed().as_millis() < 300);
+    if just_closed {
+        return Ok(());
+    }
+
+    let scale = window.scale_factor().map_err(err)?;
+    let origin = window.inner_position().map_err(err)?;
+    let px = |v: f64| (v * scale).round() as i32;
+    let anchor = RECT {
+        left: origin.x + px(rect.x),
+        top: origin.y + px(rect.y),
+        right: origin.x + px(rect.x + rect.width),
+        bottom: origin.y + px(rect.y + rect.height),
+    };
+    let mid = window
+        .current_monitor()
+        .map_err(err)?
+        .map(|m| m.position().y + m.size().height as i32 / 2)
+        .unwrap_or(i32::MAX);
+    let up = (anchor.top + anchor.bottom) / 2 > mid;
+    if let Ok(mut c) = CARD.lock() {
+        *c = Some(CardState {
+            entry_id: card.entry_id.clone(),
+            anchor,
+            up,
+        });
+    }
+    app.emit_to(
+        tauri::EventTarget::webview_window("card"),
+        "card-open",
+        CardOpen {
+            kind: card.kind,
+            entry_id: card.entry_id,
+            up,
+        },
+    )
+    .map_err(err)
+}
+
+/// The card rendered at `width`×`height` CSS px: position it over its pill and show it.
+#[tauri::command]
+pub fn place_card(app: AppHandle, width: f64, height: f64) -> CmdResult<()> {
+    let Some(w) = app.get_webview_window("card") else {
+        return Ok(());
+    };
+    let Some((anchor, up)) = CARD
+        .lock()
+        .ok()
+        .and_then(|c| c.as_ref().map(|s| (s.anchor, s.up)))
+    else {
+        return Ok(());
+    };
+    let cx = (anchor.left + anchor.right) / 2;
+    let cy = (anchor.top + anchor.bottom) / 2;
+    let Some(mon) = app
+        .monitor_from_point(cx as f64, cy as f64)
+        .map_err(err)?
+        .or(w.primary_monitor().map_err(err)?)
+    else {
+        return Ok(());
+    };
+    let scale = mon.scale_factor();
+    let (w_px, h_px) = (
+        (width.clamp(120.0, 900.0) * scale) as i32,
+        (height.clamp(60.0, 1000.0) * scale) as i32,
+    );
+    let gap = (CARD_GAP * scale) as i32;
+    let p = mon.position();
+    let s = mon.size();
+    let (left, top, right, bottom) = (p.x, p.y, p.x + s.width as i32, p.y + s.height as i32);
+    let x = (cx - w_px / 2).clamp(left + gap, (right - w_px - gap).max(left + gap));
+    let y = if up {
+        anchor.top - h_px - gap
+    } else {
+        anchor.bottom + gap
+    };
+    let y = y.clamp(top + gap, (bottom - h_px - gap).max(top + gap));
+
+    w.set_size(PhysicalSize::new(w_px as u32, h_px as u32))
+        .map_err(err)?;
+    w.set_position(PhysicalPosition::new(x, y)).map_err(err)?;
+    w.show().map_err(err)?;
+    w.set_focus().map_err(err)
+}
+
+#[tauri::command]
+pub fn close_card(app: AppHandle) -> CmdResult<()> {
+    match app.get_webview_window("card") {
+        Some(w) => w.hide().map_err(err),
+        None => Ok(()),
+    }
 }
 
 // ---------- settings window ----------

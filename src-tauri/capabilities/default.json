@@ -2,7 +2,13 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Permissions for Harbor's windows",
-  "windows": ["bar", "dock", "widgets", "settings"],
+  "windows": [
+    "bar",
+    "dock",
+    "widgets",
+    "settings",
+    "card"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-show",
