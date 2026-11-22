@@ -1,6 +1,6 @@
 // Shared data sources. Each key is polled once no matter how many widgets use it.
 import { useSyncExternalStore } from "react";
-import { api, NowPlaying, SystemInfo, WidgetConfig } from "../lib/api";
+import { api, NowPlaying, PrayerDay, SystemInfo, WidgetConfig } from "../lib/api";
 import { useShared } from "./kit";
 
 export const useStats = () => useShared("stats", api.stats, 2000);
@@ -11,6 +11,15 @@ export function useWeather(shared: WidgetConfig) {
   const loc = shared.location;
   const key = loc ? `weather:${loc.lat.toFixed(3)},${loc.lon.toFixed(3)}:${shared.imperial}` : null;
   return useShared(key, () => api.weather(loc!.lat, loc!.lon, shared.imperial), 15 * 60_000);
+}
+
+/** Today's prayer times at the shared location. Re-keyed when the date changes. */
+export function usePrayer(shared: WidgetConfig) {
+  const loc = shared.location;
+  const today = new Date();
+  const day = today.toDateString();
+  const key = loc ? `prayer:${loc.lat.toFixed(3)},${loc.lon.toFixed(3)}:${shared.prayerMethod}:${shared.prayerAsr}:${day}` : null;
+  return useShared<PrayerDay>(key, () => api.prayerTimes(loc!.lat, loc!.lon, today, shared.prayerMethod, shared.prayerAsr), 60 * 60_000);
 }
 
 export const useNowPlaying = () => useShared<NowPlaying | null>("now-playing", api.nowPlaying, 1500);

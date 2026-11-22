@@ -1,0 +1,134 @@
+/* The notch is always black, whatever the appearance style, like a hardware notch. */
+body[data-surface="notch"] { overflow: hidden; }
+
+.n-stage { display: flex; justify-content: center; height: 100%; }
+
+.notch {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  background: #000;
+  color: #f5f5f7;
+  font-size: 12.5px;
+  border-radius: 0 0 14px 14px;
+  transition:
+    width 0.3s cubic-bezier(0.2, 0.9, 0.3, 1),
+    height 0.3s cubic-bezier(0.2, 0.9, 0.3, 1),
+    border-radius 0.3s ease;
+}
+.notch.open { border-radius: 0 0 26px 26px; }
+
+/* Laid out at its natural size; the island animates around it. */
+.n-inner { position: absolute; top: 0; left: 50%; transform: translateX(-50%); }
+
+.n-dim { color: rgba(245, 245, 247, 0.55); }
+.n-ellipsis { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.n-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.n-empty { margin: 10px 0 2px; text-align: center; }
+.n-error { color: #f87171; }
+.n-link { color: #60a5fa; font-size: 11.5px; }
+
+.notch button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+
+/* ---------- closed ---------- */
+
+.n-closed {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  min-width: 200px;
+  width: max-content;
+  padding: 0 14px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+.n-spacer { flex: 1; min-width: 24px; }
+.n-time { font-weight: 600; font-variant-numeric: tabular-nums; }
+.n-track { max-width: 150px; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.n-chip { font-weight: 600; font-variant-numeric: tabular-nums; }
+.n-chip .n-dim { font-weight: 400; }
+
+.n-art { display: block; flex: none; border-radius: 6px; object-fit: cover; }
+.n-art-empty { display: grid; place-items: center; background: #27272a; color: #a1a1aa; }
+
+.n-bars { display: inline-flex; align-items: flex-end; gap: 2px; height: 12px; }
+.n-bars i { width: 2.5px; height: 100%; border-radius: 2px; background: #4ade80; transform-origin: bottom; animation: n-bar 0.9s ease-in-out infinite; }
+.n-bars i:nth-child(2) { animation-delay: -0.3s; }
+.n-bars i:nth-child(3) { animation-delay: -0.6s; }
+.n-bars i:nth-child(4) { animation-delay: -0.15s; }
+@keyframes n-bar {
+  0%, 100% { transform: scaleY(0.3); }
+  50% { transform: scaleY(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notch { transition: none; }
+  .n-bars i { animation: none; transform: scaleY(0.6); }
+}
+
+/* ---------- open ---------- */
+
+.n-open {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 10px 18px 16px;
+  box-sizing: border-box;
+  animation: n-fade 0.25s ease;
+}
+@keyframes n-fade {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+
+.n-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.n-big { font-size: 28px; font-weight: 600; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.n-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 0; }
+.n-weather { display: flex; align-items: center; gap: 6px; text-align: right; max-width: 170px; padding: 2px 6px !important; border-radius: 10px; }
+.n-weather:hover { background: #27272a !important; }
+.n-weather-icon { font-size: 22px; }
+
+.n-tabs { display: flex; gap: 2px; padding: 2px; border-radius: 9px; background: #18181b; }
+.n-tabs button { padding: 3px 10px; border-radius: 7px; font-size: 11.5px; color: rgba(245, 245, 247, 0.6); }
+.n-tabs button.on { background: #3f3f46; color: #fff; }
+
+.n-alert { padding: 8px 12px; border-radius: 12px; background: rgba(74, 222, 128, 0.15); color: #86efac; font-weight: 600; }
+
+.n-media { display: flex; align-items: center; gap: 12px; }
+.n-media-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.n-title { font-weight: 600; font-size: 14px; }
+.n-progress-row { display: flex; align-items: center; gap: 6px; font-size: 10.5px; color: rgba(245, 245, 247, 0.55); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.n-progress { flex: 1; height: 4px; border-radius: 2px; background: #3f3f46; overflow: hidden; }
+.n-progress > div { height: 100%; background: #f5f5f7; }
+.n-controls { display: flex; align-items: center; gap: 4px; }
+.n-controls button { width: 32px; height: 32px; border-radius: 50%; font-size: 15px; }
+.n-controls button:hover { background: #27272a; }
+.n-controls .n-play { width: 38px; height: 38px; background: #f5f5f7; color: #000; font-size: 16px; }
+.n-controls .n-play:hover { background: #fff; }
+
+.n-section { display: flex; flex-direction: column; gap: 4px; padding-top: 10px; border-top: 1px solid #27272a; }
+.notch .w-prayer-list { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.notch .w-prayer { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-radius: 10px; font-variant-numeric: tabular-nums; }
+.notch .w-prayer .w-small { font-size: 10.5px; color: rgba(245, 245, 247, 0.6); }
+.notch .w-prayer.past { opacity: 0.4; }
+.notch .w-prayer.next { background: rgba(74, 222, 128, 0.16); color: #86efac; }
+
+.n-clips { display: flex; flex-direction: column; gap: 8px; }
+.n-clip-list { display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; }
+.n-clip { display: flex; align-items: center; gap: 4px; padding: 4px 6px; border-radius: 10px; background: #18181b; }
+.n-clip.pinned { box-shadow: inset 2px 0 0 #fbbf24; }
+.n-clip-main { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; text-align: left; padding: 2px 4px !important; border-radius: 6px; }
+.n-clip-main:hover { background: #27272a !important; }
+.n-clip-main img { max-height: 48px; max-width: 120px; border-radius: 4px; }
+.n-clip-text {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.n-icon { width: 24px; height: 24px; border-radius: 6px; opacity: 0.45; font-size: 11px; }
+.n-icon:hover, .n-icon.on { opacity: 1; background: #27272a !important; }
+.n-copied { color: #4ade80; font-size: 11px; padding: 0 6px; }
+
+.notch button:focus-visible { outline: 2px solid #60a5fa; outline-offset: 1px; }

@@ -70,6 +70,8 @@ pub struct DockSettings {
     pub reserve_space: bool,
     /// Hide the Windows taskbar while Harbor runs (restored on quit).
     pub hide_taskbar: bool,
+    /// Win+1…9 open the dock's apps by position.
+    pub win_number_keys: bool,
     pub items: Vec<DockEntry>,
 }
 
@@ -84,6 +86,7 @@ impl Default for DockSettings {
             style: DockStyle::Floating,
             reserve_space: true,
             hide_taskbar: false,
+            win_number_keys: true,
             items: vec![DockEntry {
                 id: "apps".into(),
                 kind: "apps".into(),
@@ -172,6 +175,27 @@ impl Default for Automations {
     }
 }
 
+/// The notch: a black island at the top centre that expands on hover.
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+#[serde(rename_all = "camelCase", default)]
+pub struct NotchSettings {
+    pub enabled: bool,
+    /// Countdown to the next prayer in the closed notch (instead of the weather).
+    pub prayer: bool,
+    /// Keep a history of copied text and images (memory only; pins are saved).
+    pub clipboard: bool,
+}
+
+impl Default for NotchSettings {
+    fn default() -> Self {
+        Self {
+            enabled: true,
+            prayer: false,
+            clipboard: true,
+        }
+    }
+}
+
 /// Minutes since midnight for "HH:MM".
 pub fn parse_hhmm(s: &str) -> Option<u32> {
     let (h, m) = s.trim().split_once(':')?;
@@ -215,6 +239,7 @@ pub struct Config {
     pub updates: UpdateSettings,
     pub appearance: Appearance,
     pub automations: Automations,
+    pub notch: NotchSettings,
     /// Custom icons keyed by lower-cased icon source (pinned path or running app).
     pub icon_overrides: BTreeMap<String, String>,
 }
@@ -239,6 +264,7 @@ impl Default for Config {
             updates: UpdateSettings::default(),
             appearance: Appearance::default(),
             automations: Automations::default(),
+            notch: NotchSettings::default(),
             icon_overrides: BTreeMap::new(),
         }
     }
@@ -337,8 +363,15 @@ pub fn save_config(app: AppHandle, config: Config) -> CmdResult<Config> {
     let tmp = path.with_extension("json.tmp");
     fs::write(&tmp, text).map_err(err)?;
     fs::rename(&tmp, &path).map_err(err)?;
+    apply_runtime(&app, &config);
     let _ = app.emit(CONFIG_EVENT, &config);
     Ok(config)
+}
+
+/// Settings the backend enforces itself (hooks and watchers), at startup and after each save.
+pub fn apply_runtime(app: &AppHandle, config: &Config) {
+    super::hotkeys::set_enabled(config.dock.win_number_keys);
+    super::clipboard::set_enabled(app, config.notch.clipboard);
 }
 
 /// Opens an .exe, .lnk, document, folder or `shell:AppsFolder\...` app the way Explorer would.
@@ -383,6 +416,8 @@ mod tests {
             "update checks default on for old configs"
         );
         assert!(c.icon_overrides.is_empty());
+        assert_eq!(c.notch, NotchSettings::default());
+        assert!(c.dock.win_number_keys);
     }
 
     #[test]
@@ -488,5 +523,7 @@ mod tests {
         assert!(v["dock"].get("iconSize").is_some());
         assert!(v["bar"].get("clock24h").is_some());
         assert!(v.get("iconOverrides").is_some());
+        assert!(v["dock"].get("winNumberKeys").is_some());
+        assert!(v["notch"].get("clipboard").is_some());
     }
 }

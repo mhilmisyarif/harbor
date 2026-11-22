@@ -42,8 +42,11 @@ fn com() {
 
 // ---------- fullscreen auto-hide ----------
 
-/// Hides the dock and bar while a game, video or presentation is fullscreen,
-/// and brings back exactly the windows it hid.
+/// True while something is fullscreen, so the notch doesn't re-show itself when it resizes.
+pub static FULLSCREEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Hides the dock, bar and notch while a game, video or presentation is
+/// fullscreen, and brings back exactly the windows it hid.
 pub fn start_fullscreen_watch(app: AppHandle) {
     let _ = std::thread::Builder::new().name("harbor-fullscreen".into()).spawn(move || {
         let mut hidden: Vec<&'static str> = Vec::new();
@@ -51,8 +54,9 @@ pub fn start_fullscreen_watch(app: AppHandle) {
             std::thread::sleep(Duration::from_millis(900));
             let state = unsafe { SHQueryUserNotificationState() }.ok();
             let fullscreen = matches!(state, Some(s) if s == QUNS_BUSY || s == QUNS_RUNNING_D3D_FULL_SCREEN || s == QUNS_PRESENTATION_MODE);
+            FULLSCREEN.store(fullscreen, std::sync::atomic::Ordering::SeqCst);
             if fullscreen && hidden.is_empty() {
-                for label in ["dock", "bar"] {
+                for label in ["dock", "bar", "notch"] {
                     if let Some(w) = app.get_webview_window(label) {
                         if w.is_visible().unwrap_or(false) && w.hide().is_ok() {
                             hidden.push(label);

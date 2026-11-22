@@ -8,7 +8,8 @@
     "widgets",
     "settings",
     "card",
-    "preview"
+    "preview",
+    "notch"
   ],
   "permissions": [
     "core:default",

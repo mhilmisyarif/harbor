@@ -257,6 +257,22 @@ function AppsGroup({ config, update, windows }: { config: Config; update: Update
     await menu.popup();
   };
 
+  // Win+1…9 (from the backend's keyboard hook) act like clicking the Nth app.
+  const latest = useRef({ items, onClick });
+  latest.current = { items, onClick };
+  useEffect(() => {
+    const off = listen<number>("dock-hotkey", (e) => {
+      const { items, onClick } = latest.current;
+      const item = items[e.payload - 1];
+      // The element anchors a group's card, like a real click would.
+      const el = document.querySelectorAll<HTMLElement>(".dock-apps .dock-item")[e.payload - 1];
+      if (item && el) onClick(item, el);
+    });
+    return () => {
+      off.then((f) => f());
+    };
+  }, []);
+
   const scaleAt = (i: number) => {
     if (mouseX === null || scale === 1) return 1;
     const d = Math.abs(mouseX - (i * slot + slot / 2));

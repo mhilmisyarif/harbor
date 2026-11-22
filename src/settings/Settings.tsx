@@ -1,12 +1,14 @@
 import { ReactNode, useEffect, useState } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
-import { AppearanceStyle, BarSettings, Config, DockSettings, exeName, PinnedApp, samePath } from "../lib/api";
+import { AppearanceStyle, BarSettings, Config, DockSettings, exeName, NotchSettings, PinnedApp, samePath } from "../lib/api";
 import { iconKey, useConfig, useIcons } from "../lib/config";
 import { pickApp, pickIcon } from "../lib/pickIcon";
 import { DockLayoutSection } from "./DockLayout";
 import { AutomationsSection, CalendarsSection } from "./Smart";
 import { useUpdater } from "../lib/updates";
+import { useWidgetConfig } from "../lib/widgetConfig";
+import { METHODS } from "../widgets/prayer";
 import { fmtBytes } from "../widgets/kit";
 
 type Update = (change: (c: Config) => Config) => void;
@@ -118,6 +120,9 @@ function DockSection({ dock, update }: { dock: DockSettings; update: Update }) {
           checked={dock.showRunning}
           onChange={(showRunning) => set({ showRunning })}
         />
+      </Row>
+      <Row label="Win+1 … Win+9 open dock apps" hint="By position, like the taskbar. Win+Shift/Ctrl/Alt combinations keep their Windows meaning.">
+        <Toggle label="Win+1 … Win+9 open dock apps" checked={dock.winNumberKeys} onChange={(winNumberKeys) => set({ winNumberKeys })} />
       </Row>
     </Section>
   );
@@ -273,6 +278,58 @@ function BarSection({ bar, update }: { bar: BarSettings; update: Update }) {
   );
 }
 
+function NotchSection({ notch, update }: { notch: NotchSettings; update: Update }) {
+  const [shared, , updateShared] = useWidgetConfig();
+  const set = (patch: Partial<NotchSettings>) => update((c) => ({ ...c, notch: { ...c.notch, ...patch } }));
+  return (
+    <Section title="Notch">
+      <Row label="Show the notch" hint="A black island at the top centre of the screen. Hover it for media, prayer times and your clipboard.">
+        <Toggle label="Show the notch" checked={notch.enabled} onChange={(enabled) => set({ enabled })} />
+      </Row>
+      <Row
+        label="Prayer times"
+        hint={
+          shared?.location
+            ? `Countdown to the next prayer in ${shared.location.name}, and a reminder when it's due.`
+            : "Set a city in any weather or prayer widget first."
+        }
+      >
+        <Toggle label="Prayer times" checked={notch.prayer} onChange={(prayer) => set({ prayer })} />
+      </Row>
+      {shared && (
+        <>
+          <Row label="Calculation method">
+            <select className="s-input" aria-label="Calculation method" value={shared.prayerMethod} onChange={(e) => updateShared({ prayerMethod: e.target.value })}>
+              {METHODS.map(([id, label]) => (
+                <option key={id} value={id}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </Row>
+          <Row label="Asr">
+            <select
+              className="s-input"
+              aria-label="Asr"
+              value={shared.prayerAsr}
+              onChange={(e) => updateShared({ prayerAsr: e.target.value as typeof shared.prayerAsr })}
+            >
+              <option value="standard">Standard</option>
+              <option value="hanafi">Hanafi</option>
+            </select>
+          </Row>
+        </>
+      )}
+      <Row
+        label="Clipboard history"
+        hint="Text and images you copy, kept in memory. Pinned items are saved to disk. Copies that password managers mark as private are skipped."
+      >
+        <Toggle label="Clipboard history" checked={notch.clipboard} onChange={(clipboard) => set({ clipboard })} />
+      </Row>
+    </Section>
+  );
+}
+
 function GeneralSection() {
   const [autostart, setAutostart] = useState<boolean | null>(null);
   useEffect(() => {
@@ -395,6 +452,7 @@ export function Settings() {
       <DockSection dock={config.dock} update={update} />
       <PinnedSection config={config} update={update} />
       <BarSection bar={config.bar} update={update} />
+      <NotchSection notch={config.notch} update={update} />
       <CalendarsSection Row={Row} />
       <AutomationsSection config={config} update={update} Row={Row} Toggle={Toggle} />
       <GeneralSection />

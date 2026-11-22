@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The notch: a black island at the top centre of the screen. Closed, it shows
+  what's playing (with live equalizer bars) or the time, plus the weather or
+  the next prayer. Hover to open it for media controls, today's prayer times
+  and your clipboard history. It opens by itself for a moment when the track
+  changes or a prayer is due. Click the weather in it for the forecast and
+  details. Turn it off in **Settings → Notch**.
+- Prayer times widget and dock pill: the five daily prayers and a countdown to
+  the next one, calculated offline for your city. Choose the calculation method
+  (Kemenag, Muslim World League, ISNA, Egypt, Karachi or Umm al-Qura) and the
+  Asr convention.
+- Clipboard history in the notch: text and images you copy, newest first.
+  Click one to copy it again, pin the ones you want to keep across restarts, or
+  clear the rest. Copies that password managers mark as private are skipped,
+  and you can turn the history off in **Settings → Notch**.
+- Win+1 … Win+9 open or switch to the dock's apps by position, like the
+  taskbar. Turn it off in **Settings → Dock icons**.
+
+### Changed
+
+- Clicking the weather in the menu bar opens the weather card (forecast,
+  hourly, sunrise and sunset), like the dock's weather pill, instead of the
+  widget panel. The ▦ button still opens the panel.
+
 ## [0.0.4] - 2026-11-17
 
 ### Added

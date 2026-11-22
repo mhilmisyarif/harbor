@@ -4,6 +4,9 @@
 use std::sync::atomic::{AtomicIsize, Ordering};
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize};
 use windows::Win32::Foundation::{HWND, RECT};
+use windows::Win32::UI::WindowsAndMessaging::{
+    SetWindowPos, HWND_TOPMOST, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOSIZE,
+};
 
 use super::{
     appbar::{self, Edge},
@@ -416,6 +419,45 @@ pub fn close_card(app: AppHandle) -> CmdResult<()> {
     match app.get_webview_window("card") {
         Some(w) => w.hide().map_err(err),
         None => Ok(()),
+    }
+}
+
+// ---------- notch ----------
+
+/// The notch rendered at `width`×`height` CSS px: pin it to the top centre of
+/// the primary monitor (over the menu bar) and show it.
+#[tauri::command]
+pub fn place_notch(app: AppHandle, width: f64, height: f64) -> CmdResult<()> {
+    let Some(w) = app.get_webview_window("notch") else {
+        return Ok(());
+    };
+    let Some(mon) = w.primary_monitor().map_err(err)? else {
+        return Ok(());
+    };
+    let scale = mon.scale_factor();
+    let w_px = (width.clamp(80.0, 900.0) * scale).round() as i32;
+    let h_px = (height.clamp(16.0, 900.0) * scale).round() as i32;
+    let rc = monitor_rect(&mon);
+    let x = rc.left + (rc.right - rc.left - w_px) / 2;
+    let hwnd = raw_hwnd(&w).map_err(err)?;
+    // One call moves, resizes and raises it, so it never flashes off-centre.
+    unsafe { SetWindowPos(hwnd, HWND_TOPMOST, x, rc.top, w_px, h_px, SWP_NOACTIVATE) }
+        .map_err(err)?;
+    let fullscreen = super::system_controls::FULLSCREEN.load(std::sync::atomic::Ordering::SeqCst);
+    if !fullscreen && !w.is_visible().map_err(err)? {
+        w.show().map_err(err)?;
+    }
+    Ok(())
+}
+
+/// Keeps the notch above the bar and dock after either is clicked (all three are topmost).
+pub fn raise_notch(app: &AppHandle) {
+    let Some(w) = app.get_webview_window("notch") else {
+        return;
+    };
+    if let Ok(hwnd) = raw_hwnd(&w) {
+        let flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
+        let _ = unsafe { SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, flags) };
     }
 }
 

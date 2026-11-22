@@ -1,8 +1,8 @@
 mod commands;
 
 use commands::{
-    apps, audio, automations, calendar, icons, layout, media, preview, screen_time, stats,
-    system_controls, system_extra, taskbar, wallpaper, widgets, windows_list,
+    apps, audio, automations, calendar, clipboard, hotkeys, icons, layout, media, prayer, preview,
+    screen_time, stats, system_controls, system_extra, taskbar, wallpaper, widgets, windows_list,
 };
 use tauri::{
     menu::{Menu, MenuItem},
@@ -101,6 +101,9 @@ pub fn run() {
             // Safety net: if a previous run was killed with the taskbar hidden, bring it back.
             taskbar::restore();
             let config = apps::load_config(handle.clone()).unwrap_or_default();
+            clipboard::start(handle.clone());
+            hotkeys::start(handle.clone());
+            apps::apply_runtime(handle, &config);
             if config.dock.hide_taskbar {
                 let _ = taskbar::set_taskbar_hidden(true);
             }
@@ -123,6 +126,10 @@ pub fn run() {
             WindowEvent::Focused(false) if window.label() == "widgets" => {
                 let _ = window.hide();
                 layout::note_widgets_hidden();
+            }
+            // Clicking the bar or dock raises it over the notch; put the notch back on top.
+            WindowEvent::Focused(true) if matches!(window.label(), "bar" | "dock") => {
+                layout::raise_notch(window.app_handle());
             }
             // Widget cards close when you click anywhere else.
             WindowEvent::Focused(false) if window.label() == "card" => {
@@ -165,6 +172,13 @@ pub fn run() {
             layout::open_card,
             layout::place_card,
             layout::close_card,
+            layout::place_notch,
+            prayer::prayer_times,
+            clipboard::clipboard_history,
+            clipboard::clipboard_copy,
+            clipboard::clipboard_pin,
+            clipboard::clipboard_delete,
+            clipboard::clipboard_clear,
             wallpaper::desktop_wallpaper,
             system_controls::recycle_files,
             system_controls::app_volumes,

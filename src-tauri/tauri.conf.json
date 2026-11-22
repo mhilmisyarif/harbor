@@ -67,6 +67,21 @@
         "dragDropEnabled": false
       },
       {
+        "label": "notch",
+        "title": "Harbor Notch",
+        "width": 200,
+        "height": 32,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "resizable": false,
+        "shadow": false,
+        "focus": false,
+        "visible": false,
+        "dragDropEnabled": false
+      },
+      {
         "label": "card",
         "title": "Harbor Card",
         "width": 360,

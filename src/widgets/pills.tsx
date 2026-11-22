@@ -2,7 +2,8 @@
 // the dock's icons (var(--icon)) and as wide as its content.
 import { FC, ReactNode, useState } from "react";
 import { api, weatherLook } from "../lib/api";
-import { useMicrophone, useNetworkHistory, useNowPlaying, useStats, useSystemInfo, useVolume, useWeather } from "./data";
+import { useMicrophone, useNetworkHistory, useNowPlaying, usePrayer, useStats, useSystemInfo, useVolume, useWeather } from "./data";
+import { countdown, hhmm, nextPrayer } from "./prayer";
 import { Change, fmtBytes, fmtPrice, Ring, setShared, Spark, timeString, useNow, useShared, WidgetProps, zonedParts } from "./kit";
 import { fmtStopwatch, PHASE_LABEL, PomodoroSettings, useCountdown, usePomodoro, useStopwatch } from "./timers";
 import { fmtSecs, useBrightness, useFolder, useScreenTime } from "./controls";
@@ -256,6 +257,22 @@ const ForecastPill = ({ shared }: P) => {
           </span>
         </div>
       ))}
+    </Pill>
+  );
+};
+
+// ---------- prayer ----------
+
+const PrayerPill = ({ shared }: P) => {
+  const now = useNow(15_000).getTime();
+  const { data } = usePrayer(shared);
+  if (!shared.location) return <Pill title="Click to choose a city">🕌 <span className="pill-sub">Set city</span></Pill>;
+  const next = data && nextPrayer(data, now);
+  if (!next) return <Pill>🕌 …</Pill>;
+  return (
+    <Pill title={`${shared.location.name}: ${next.name} at ${hhmm(next.at)}`}>
+      <span className="pill-icon">🕌</span>
+      <Stack top={<b>{next.name} {hhmm(next.at)}</b>} bottom={`in ${countdown(next.at - now)}`} />
     </Pill>
   );
 };
@@ -639,6 +656,7 @@ export const PILLS: Record<string, FC<P>> = {
   "world-time": WorldTimePill,
   "clock-weather": ClockPill,
   "day-progress": DayProgressPill,
+  "prayer-times": PrayerPill,
   pomodoro: PomodoroPill as FC<P>,
   timer: TimerPill,
   stopwatch: StopwatchPill,

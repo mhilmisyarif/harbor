@@ -4,6 +4,7 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { Bar } from "./bar/Bar";
 import { Card } from "./card/Card";
 import { Dock } from "./dock/Dock";
+import { Notch } from "./notch/Notch";
 import { useConfig } from "./lib/config";
 import { Preview } from "./preview/Preview";
 import { Settings } from "./settings/Settings";
@@ -14,6 +15,7 @@ import "./widgets/widgets.css";
 import "./card/card.css";
 import "./settings/settings.css";
 import "./preview/preview.css";
+import "./notch/notch.css";
 
 // One bundle serves every window; the window label picks the surface.
 const label = getCurrentWindow().label;
@@ -26,6 +28,7 @@ const surfaces: Record<string, () => JSX.Element | null> = {
   settings: Settings,
   card: Card,
   preview: Preview,
+  notch: Notch,
 };
 const Surface = surfaces[label] ?? Dock;
 

@@ -7,6 +7,7 @@ import * as F from "./files";
 import * as M from "./markets";
 import * as Me from "./media";
 import * as P from "./productivity";
+import * as Pr from "./prayer";
 import * as S from "./system";
 import * as T from "./time";
 import * as W from "./weather";
@@ -53,6 +54,7 @@ export const WIDGETS: WidgetDef[] = [
   { kind: "week-strip", name: "7 days", category: "Clocks", size: "wide", description: "This week as a strip, with each day's high.", defaults: {}, Component: T.WeekStrip, Settings: W.WeatherForm },
   { kind: "day-progress", name: "Day progress", category: "Clocks", size: "small", description: "How much of today has passed.", defaults: {}, Component: T.DayProgress },
   { kind: "month-progress", name: "Month progress", category: "Clocks", size: "small", description: "How much of the month has passed.", defaults: {}, Component: T.MonthProgress },
+  { kind: "prayer-times", name: "Prayer times", category: "Clocks", size: "wide", description: "Today's five prayers and a countdown to the next, calculated offline for your city.", defaults: {}, Component: Pr.PrayerTimes, Settings: Pr.PrayerForm },
   { kind: "year-progress", name: "Year progress", category: "Clocks", size: "wide", description: "The year as a grid of dots filling up.", defaults: {}, Component: T.YearProgress },
 
   // Productivity

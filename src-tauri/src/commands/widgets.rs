@@ -413,6 +413,9 @@ pub struct WidgetConfig {
     pub crypto: Vec<String>,
     pub fx_base: String,
     pub fx_quotes: Vec<String>,
+    /// Prayer times: calculation method (see `prayer::METHODS`) and Asr convention.
+    pub prayer_method: String,
+    pub prayer_asr: String,
     /// Widgets in panel order.
     pub layout: Vec<WidgetInstance>,
     /// iCal feeds shown in the calendar card and used by automations.
@@ -434,6 +437,8 @@ impl Default for WidgetConfig {
             crypto: v(&["BTCUSDT", "ETHUSDT", "SOLUSDT"]),
             fx_base: "USD".into(),
             fx_quotes: v(&["EUR", "GBP", "JPY", "IDR"]),
+            prayer_method: "kemenag".into(),
+            prayer_asr: "standard".into(),
             layout: vec![
                 w("w1", "clock"),
                 w("w2", "weather"),
@@ -496,6 +501,13 @@ impl WidgetConfig {
             })
             .take(20)
             .collect();
+        let d = Self::default();
+        if !super::prayer::is_method(&self.prayer_method) {
+            self.prayer_method = d.prayer_method;
+        }
+        if !["standard", "hanafi"].contains(&self.prayer_asr.as_str()) {
+            self.prayer_asr = d.prayer_asr;
+        }
         self
     }
 }
@@ -592,6 +604,21 @@ mod tests {
         assert_eq!(c.fx_base, "USD");
         assert!(!c.stocks.is_empty());
         assert!(c.location.is_none());
+        assert_eq!(c.prayer_method, "kemenag");
+    }
+
+    #[test]
+    fn unknown_prayer_settings_fall_back() {
+        let c = WidgetConfig {
+            prayer_method: "made-up".into(),
+            prayer_asr: "x".into(),
+            ..WidgetConfig::default()
+        };
+        let c = c.sanitized();
+        assert_eq!(
+            (c.prayer_method.as_str(), c.prayer_asr.as_str()),
+            ("kemenag", "standard")
+        );
     }
 
     #[test]

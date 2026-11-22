@@ -44,6 +44,8 @@ export interface DockSettings {
   style: DockStyle;
   reserveSpace: boolean;
   hideTaskbar: boolean;
+  /** Win+1…9 open the dock's apps by position. */
+  winNumberKeys: boolean;
   items: DockEntry[];
 }
 
@@ -106,6 +108,14 @@ export interface UpdateSettings {
   autoInstall: boolean;
 }
 
+export interface NotchSettings {
+  enabled: boolean;
+  /** Next-prayer countdown in the closed notch instead of the weather. */
+  prayer: boolean;
+  /** Keep a history of copied text and images. */
+  clipboard: boolean;
+}
+
 export interface Config {
   pinned: PinnedApp[];
   dock: DockSettings;
@@ -113,6 +123,7 @@ export interface Config {
   updates: UpdateSettings;
   appearance: Appearance;
   automations: Automations;
+  notch: NotchSettings;
   /** Custom PNG data-URL icons keyed by lower-cased icon source. */
   iconOverrides: Record<string, string>;
 }
@@ -167,6 +178,24 @@ export const api = {
   screenTime: (days: number) => invoke<DayTime[]>("screen_time", { days }),
   calendarEvents: (days: number) => invoke<{ events: CalEvent[]; errors: string[] }>("calendar_events", { days }),
   toggleWidgets: () => invoke<void>("toggle_widgets"),
+  placeNotch: (width: number, height: number) => invoke<void>("place_notch", { width, height }),
+
+  // Prayer times (calculated locally) and clipboard history
+  prayerTimes: (lat: number, lon: number, date: Date, method: string, asr: string) =>
+    invoke<PrayerDay>("prayer_times", {
+      lat,
+      lon,
+      year: date.getFullYear(),
+      month: date.getMonth() + 1,
+      day: date.getDate(),
+      method,
+      asr,
+    }),
+  clipboardHistory: () => invoke<ClipItem[]>("clipboard_history"),
+  clipboardCopy: (id: number) => invoke<void>("clipboard_copy", { id }),
+  clipboardPin: (id: number, pinned: boolean) => invoke<void>("clipboard_pin", { id, pinned }),
+  clipboardDelete: (id: number) => invoke<void>("clipboard_delete", { id }),
+  clipboardClear: () => invoke<void>("clipboard_clear"),
 
   // Widgets
   weather: (lat: number, lon: number, imperial: boolean) =>
@@ -299,6 +328,32 @@ export interface NowPlaying {
   art: string | null;
 }
 
+/** Unix ms; null where the sun never reaches that angle (far north/south). */
+export interface PrayerDay {
+  fajr: number | null;
+  sunrise: number | null;
+  dhuhr: number | null;
+  asr: number | null;
+  maghrib: number | null;
+  isha: number | null;
+  nextFajr: number | null;
+}
+
+export interface ClipItem {
+  id: number;
+  kind: "text" | "image";
+  /** Preview (first 600 characters). */
+  text: string | null;
+  thumb: string | null;
+  width: number | null;
+  height: number | null;
+  pinned: boolean;
+  at: number;
+}
+
+/** Emitted by the backend whenever the clipboard history changes. */
+export const CLIPBOARD_EVENT = "clipboard-changed";
+
 export interface LeetCodeResponse {
   data?: {
     matchedUser: {
@@ -330,6 +385,8 @@ export interface WidgetConfig {
   crypto: string[];
   fxBase: string;
   fxQuotes: string[];
+  prayerMethod: string;
+  prayerAsr: "standard" | "hanafi";
   layout: WidgetInstance[];
   calendars: CalendarSource[];
 }

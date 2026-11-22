@@ -5,7 +5,7 @@ import { api, poll, Stats, Volume, WeatherResponse, weatherLook, WIDGET_CONFIG_E
 import { useConfig } from "../lib/config";
 import { Backdrop } from "../lib/Backdrop";
 
-/** Compact current-weather readout; opens the widget panel on click. */
+/** Compact current-weather readout; opens the weather card on click. */
 function WeatherChip() {
   const [config, setConfig] = useState<WidgetConfig | null>(null);
   const [data, setData] = useState<WeatherResponse | null>(null);
@@ -27,10 +27,16 @@ function WeatherChip() {
   if (!loc || !data) return null;
   const [icon, label] = weatherLook(data.current.weather_code, data.current.is_day === 1);
   return (
-    <button className="bar-item" title={`${loc.name}: ${label}`} onClick={() => api.toggleWidgets()}>
+    <button className="bar-item" title={`${loc.name}: ${label}`} onClick={(e) => openWeatherCard(e.currentTarget, "bar-weather")}>
       {icon} {Math.round(data.current.temperature_2m)}°
     </button>
   );
+}
+
+/** Opens the weather card (forecast, hourly, sunrise) under `el`, like a dock pill does. */
+export function openWeatherCard(el: HTMLElement, entryId: string) {
+  const r = el.getBoundingClientRect();
+  api.openCard("weather", entryId, { x: r.left, y: r.top, width: r.width, height: r.height }).catch(console.error);
 }
 
 function useClock() {
